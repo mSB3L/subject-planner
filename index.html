@@ -2,259 +2,327 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3-Subject Study Planner</title>
-    <meta name="description" content="Reliable 3-subject study progression planner with draggable slots, persistent storage, smart date shifting, and image export." />
-
-    <!-- CDN Libraries for Image & PDF Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" id="meta-theme" content="#f8fafc">
+    <script>
+        /* Apply the saved (or system) theme before first paint, to avoid a flash. */
+        (function () {
+            try {
+                var t = localStorage.getItem('studyPlanner.theme');
+                if (t !== 'light' && t !== 'dark') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', t);
+            } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+        })();
+    </script>
+    <title>Interactive Study Planner</title>
+    <!-- Fully self-contained: no external scripts, fonts or network requests. -->
     <style>
+        /* ---------- Themes ---------- */
+        :root, [data-theme="light"] {
+            color-scheme: light;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --surface: #f8fafc;
+            --hover: #f1f5f9;
+            --hover-indigo: #eef2ff;
+            --border: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --border-hover: #94a3b8;
+            --text: #334155;
+            --text-2: #475569;
+            --heading: #1e293b;
+            --muted: #64748b;
+            --icon: #94a3b8;
+            --head-bg: #1e293b;
+            --head-text: #ffffff;
+            --active-bg: #1e293b;
+            --active-text: #ffffff;
+            --btn-dark: #1e293b;
+            --btn-dark-hover: #334155;
+            --btn-dark-text: #ffffff;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --danger-border: #fecaca;
+            --danger-text: #991b1b;
+            --sunday: #dc2626;
+            --warn: #b45309;
+            --link: #2563eb;
+            --toast-bg: #334155;
+            --toast-text: #ffffff;
+            --toast-btn: rgba(255, 255, 255, 0.18);
+            --toast-btn-hover: rgba(255, 255, 255, 0.3);
+            --handle: #e2e8f0;
+            --handle-hover: #cbd5e1;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            --backdrop: rgba(15, 23, 42, 0.5);
+            --tint-pct: 9%;
+            --placeholder: #94a3b8;
+        }
+        [data-theme="dark"] {
+            color-scheme: dark;
+            --bg: #0b1120;
+            --card: #151e30;
+            --surface: #0f1727;
+            --hover: #1d283c;
+            --hover-indigo: #232f4d;
+            --border: #2a3750;
+            --border-strong: #3a4a68;
+            --border-hover: #5b6e8f;
+            --text: #cbd5e1;
+            --text-2: #b6c2d4;
+            --heading: #f1f5f9;
+            --muted: #8393ab;
+            --icon: #6b7c96;
+            --head-bg: #0c1424;
+            --head-text: #f1f5f9;
+            --active-bg: #e2e8f0;
+            --active-text: #0f172a;
+            --btn-dark: #3b4b68;
+            --btn-dark-hover: #4a5d7e;
+            --btn-dark-text: #f1f5f9;
+            --danger: #f87171;
+            --danger-bg: rgba(239, 68, 68, 0.12);
+            --danger-border: rgba(248, 113, 113, 0.35);
+            --danger-text: #fca5a5;
+            --sunday: #f87171;
+            --warn: #fbbf24;
+            --link: #60a5fa;
+            --toast-bg: #e2e8f0;
+            --toast-text: #0f172a;
+            --toast-btn: rgba(15, 23, 42, 0.12);
+            --toast-btn-hover: rgba(15, 23, 42, 0.22);
+            --handle: #1d283c;
+            --handle-hover: #27354f;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            --backdrop: rgba(0, 0, 0, 0.65);
+            --tint-pct: 18%;
+            --placeholder: #6b7c96;
+        }
+        [data-theme="light"], [data-theme="dark"] { color: var(--text); }
+
         :root {
-            --maths-color: #ef4444; 
-            --physics-color: #3b82f6; 
-            --chem-color: #10b981; 
-            --bg-color: #f8fafc;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border-light: #e2e8f0;
-            --border-hover: #cbd5e1;
-            --primary: #0f172a;
+            --n: 3;
+            --cardw: 1200px;
         }
 
         * {
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            padding: 20px 16px 40px;
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 30px;
+            margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
         }
 
-        /* Top Header & Toolbar */
-        .header-container {
+        /* Title bar */
+        .topbar {
             width: 100%;
-            max-width: 1050px;
+            max-width: var(--cardw);
             display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
+            gap: 10px;
+            margin-bottom: 20px;
         }
+        .topbar h2 { flex: 1; margin: 0; text-align: center; color: var(--heading); font-size: 24px; line-height: 1.25; }
+        .tb-side { width: 40px; flex-shrink: 0; }
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            border: 1px solid var(--border-strong);
+            background: var(--card);
+            color: var(--text);
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .icon-btn:hover { background: var(--hover); border-color: var(--border-hover); }
 
-        .title-group {
+        .banner {
+            width: 100%;
+            max-width: var(--cardw);
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: var(--danger-bg);
+            border: 1px solid var(--danger-border);
+            color: var(--danger-text);
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .banner[hidden] { display: none; }
+
+        /* Profiles */
+        .profile-bar {
+            width: 100%;
+            max-width: var(--cardw);
             display: flex;
             align-items: center;
             gap: 8px;
+            overflow-x: auto;
+            padding: 2px 2px 12px;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
         }
-
-        .title-badge {
-            background: var(--primary);
-            color: white;
-            font-weight: 700;
-            font-size: 12px;
-            padding: 3px 7px;
-            border-radius: 6px;
-        }
-
-        h1 {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--text-main);
-            outline: none;
-            border-radius: 6px;
-            padding: 2px 6px;
-            cursor: text;
-        }
-
-        h1:hover, h1:focus {
-            background: #ffffff;
-            box-shadow: 0 0 0 1px var(--border-hover);
-        }
-
-        .toolbar {
+        .ptab {
             display: flex;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 6px;
+            flex-shrink: 0;
+            background: var(--card);
+            border: 1px solid var(--border-strong);
+            border-radius: 999px;
+            color: var(--text);
         }
-
-        .btn {
-            background: #ffffff;
-            color: var(--text-main);
-            border: 1px solid var(--border-light);
-            border-radius: 7px;
-            padding: 5px 11px;
-            font-size: 12px;
+        .ptab.active { background: var(--active-bg); border-color: var(--active-bg); color: var(--active-text); }
+        .ptab-main {
+            background: none;
+            border: none;
+            padding: 8px 16px;
             font-weight: 600;
+            font-size: 14px;
+            color: inherit;
             cursor: pointer;
-            transition: all 0.15s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            user-select: none;
+            border-radius: 999px;
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-
-        .btn:hover {
-            background: #f1f5f9;
-            border-color: var(--border-hover);
+        .ptab:not(.active):hover { background: var(--hover); }
+        .ptab-edit {
+            background: none;
+            border: none;
+            color: inherit;
+            opacity: 0.75;
+            padding: 6px 12px 6px 0;
+            cursor: pointer;
+            font-size: 14px;
         }
-
-        .btn:active {
-            transform: scale(0.97);
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .btn-primary:hover {
-            background: #1e293b;
-        }
-
-        .btn-amber {
-            color: #b45309;
-            background: #fffbeb;
-            border-color: #fde68a;
-        }
-
-        .btn-amber:hover {
-            background: #fef3c7;
-        }
-
-        .storage-status {
-            font-size: 11px;
+        .ptab-edit:hover { opacity: 1; }
+        .ptab input.ptab-input {
+            flex: none;
+            width: 170px;
+            margin: 3px;
+            padding: 6px 12px;
+            font-size: 14px;
             font-weight: 600;
-            color: var(--text-muted);
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            margin-left: 4px;
+            border-radius: 999px;
+            background: var(--card);
+            color: var(--heading);
         }
-
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background-color: #10b981;
-            transition: background-color 0.2s ease;
+        .ptab-add {
+            flex-shrink: 0;
+            background: none;
+            border: 1.5px dashed var(--border-hover);
+            border-radius: 999px;
+            padding: 7px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-2);
+            cursor: pointer;
         }
+        .ptab-add:hover { background: var(--card); border-color: var(--text-2); }
+        .ptab-main:focus-visible, .ptab-edit:focus-visible, .ptab-add:focus-visible, .icon-btn:focus-visible { outline: 3px solid rgba(59, 130, 246, 0.5); outline-offset: 2px; }
 
-        .status-dot.saving {
-            background-color: #f59e0b;
-        }
-
-        /* Planner Card */
+        /* Card + table */
         .planner-card {
-            background: #ffffff;
+            --cols: 168px repeat(var(--n), minmax(0, 1fr)) 76px;
+            --minw: calc(270px + var(--n) * 150px);
+            background: var(--card);
             border-radius: 12px;
-            border: 1px solid var(--border-light);
-            box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--shadow);
             width: 100%;
-            max-width: 1050px;
+            max-width: var(--cardw);
             overflow: hidden;
             position: relative;
         }
 
-        .planner-header {
+        #table-wrap { overflow-x: auto; }
+
+        .planner-header, .planner-row {
             display: grid;
-            grid-template-columns: 140px 1fr 1fr 1fr 36px;
+            grid-template-columns: var(--cols);
+            min-width: var(--minw);
             align-items: center;
-            gap: 10px;
-            background-color: #f8fafc;
-            border-bottom: 2px solid var(--border-light);
-            color: #475569;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            padding: 10px 16px;
+            gap: 15px;
+        }
+
+        .planner-header {
+            background-color: var(--head-bg);
+            color: var(--head-text);
+            font-weight: 600;
+            padding: 16px 20px;
             text-align: center;
         }
+        .hcell { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; }
+        .hname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hdot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25); }
 
-        .header-subject {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .sub-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .dot-m { background-color: var(--maths-color); }
-        .dot-p { background-color: var(--physics-color); }
-        .dot-c { background-color: var(--chem-color); }
-
-        /* Planner Row */
         .planner-row {
-            display: grid;
-            grid-template-columns: 140px 1fr 1fr 1fr 36px;
-            align-items: center;
-            gap: 10px;
-            padding: 7px 16px;
-            border-bottom: 1px solid #f1f5f9;
-            background: white;
-            transition: background-color 0.15s ease;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            transition: background-color 0.2s ease;
         }
 
-        .planner-row:hover {
-            background-color: #fafafa;
-        }
-
-        .planner-row.is-sunday {
-            background-color: #fffdf5;
-        }
+        .planner-row:hover { background-color: var(--hover); }
+        .is-dragging .planner-row:hover { background-color: transparent; }
 
         .col {
             display: flex;
-            align-items: center;
+            justify-content: center;
             width: 100%;
             min-width: 0;
         }
 
-        /* Date Container */
-        .date-container {
-            position: relative;
+        .col-date { align-items: center; gap: 6px; }
+        .col-actions { gap: 2px; justify-content: flex-end; }
+
+        .subject-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             width: 100%;
+            border-radius: 8px;
         }
+        .cell-main { display: contents; }
+        .cell-label { display: none; }
+
+        /* Date picker (transparent native input laid over a styled label) */
+        .date-container { position: relative; flex: 1; min-width: 0; }
 
         .date-display {
             width: 100%;
-            padding: 6px 8px;
-            border: 1px solid var(--border-light);
-            border-radius: 7px;
-            font-size: 12px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
             font-weight: 600;
-            background: #f8fafc;
+            background: var(--surface);
             text-align: center;
-            color: #334155;
             cursor: pointer;
-            transition: all 0.15s ease;
+            color: var(--text-2);
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
+        .date-display.sunday { color: var(--sunday); }
 
-        .date-container:hover .date-display {
-            background: #fff;
-            border-color: var(--border-hover);
-        }
+        .date-container:hover .date-display { background: var(--card); border-color: var(--border-hover); }
 
         .date-container input[type="date"] {
             position: absolute;
@@ -264,1111 +332,2653 @@
             height: 100%;
             opacity: 0;
             cursor: pointer;
-            z-index: 5;
+            z-index: 3;
         }
 
-        /* Draggable Subject Slot */
-        .subject-slot {
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        .date-container input[type="date"]::-webkit-calendar-picker-indicator,
+        .datepick input[type="date"]::-webkit-calendar-picker-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            background: #ffffff;
-            border: 1px solid var(--border-light);
-            border-radius: 7px;
-            padding: 3px 6px;
-            transition: border-color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
-            user-select: none;
-            position: relative;
-        }
-
-        .subject-slot:hover {
-            border-color: var(--border-hover);
-        }
-
-        /* Clean Drag-over Highlight - ZERO JUMPING, NO LAYOUT SHIFTS */
-        .subject-slot.drag-over {
-            border-color: #3b82f6 !important;
-            background-color: #eff6ff !important;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
-            transform: scale(1.015);
-            transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-        }
-
-        .subject-slot.dragging {
-            opacity: 0.45 !important;
-            border-style: dashed;
-            border-color: #3b82f6;
-            background-color: #f8fafc;
-        }
-
-        /* Smooth FLIP Slot Motion */
-        .subject-slot.slot-animating {
-            z-index: 15;
-            will-change: transform;
-            pointer-events: none;
-        }
-
-        .subject-slot.slot-moved {
-            z-index: 25;
-            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.2), 0 0 0 1.5px #3b82f6 !important;
-            background-color: #f8faff !important;
-        }
-
-        .subject-slot.slot-shifted {
-            z-index: 12;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-        }
-
-        /* Drag Grip Handle */
-        .drag-grip {
-            cursor: grab;
-            color: #cbd5e1;
-            font-size: 13px;
-            line-height: 1;
-            padding: 2px;
-            user-select: none;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .drag-grip:hover {
-            color: #64748b;
-        }
-
-        .drag-grip:active {
-            cursor: grabbing;
-        }
-
-        /* Quick Step Buttons (Up/Down) */
-        .step-btns {
-            display: inline-flex;
-            flex-direction: column;
-            gap: 1px;
-            flex-shrink: 0;
+            height: 100%;
             opacity: 0;
-            transition: opacity 0.15s;
-        }
-
-        .subject-slot:hover .step-btns {
-            opacity: 1;
-        }
-
-        .step-btn {
-            background: none;
-            border: none;
-            font-size: 8px;
-            line-height: 1;
             cursor: pointer;
-            color: #94a3b8;
-            padding: 0 1px;
         }
 
-        .step-btn:hover {
-            color: #0f172a;
-        }
-
-        .step-btn:disabled {
-            opacity: 0.2;
-            cursor: default;
-        }
-
-        /* Subject Toggle Button */
-        .slot-btn {
-            flex-shrink: 0;
-            width: 22px;
-            height: 22px;
-            border-radius: 5px;
-            border: none;
-            color: white;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.1s ease;
-        }
-
-        .slot-btn:active {
-            transform: scale(0.9);
-        }
-
-        .slot-btn.bg-m { background-color: var(--maths-color); }
-        .slot-btn.bg-p { background-color: var(--physics-color); }
-        .slot-btn.bg-c { background-color: var(--chem-color); }
-
-        .slot-btn.is-disabled {
-            background-color: #e2e8f0 !important;
-            color: #94a3b8 !important;
-        }
-
-        /* Chapter Input */
-        .chapter-input {
+        /* Inputs */
+        input[type="text"] {
             flex-grow: 1;
             min-width: 0;
-            border: none;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
             outline: none;
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-main);
-            background: transparent;
-            padding: 3px 2px;
-            cursor: text;
+            transition: all 0.3s ease;
+            background: var(--surface);
+            color: var(--text);
+        }
+        input[type="text"]::placeholder { color: var(--placeholder); }
+        input[type="text"]:disabled { color: var(--muted); }
+
+        input[type="text"]:focus {
+            background: var(--card);
+            border-color: var(--border-hover);
+            box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.15);
         }
 
-        .chapter-input::placeholder {
-            color: #94a3b8;
-            font-weight: 400;
+        input[type="text"].chapter-input { font-weight: 600; }
+
+        /* Slots: each subject's colour comes from per-cell CSS variables (--sc, --st, --ss) */
+        .slot {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border: 2.5px solid var(--border-strong);
+            border-radius: 8px;
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
+            background: var(--card);
+            outline: none;
         }
 
-        .chapter-input:disabled {
-            color: #94a3b8;
-            text-decoration: line-through;
-            cursor: not-allowed;
+        .slot:hover { transform: scale(1.1); }
+        .slot:active { transform: scale(0.95); }
+        .slot:focus-visible { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.45); }
+
+        .cell .slot.on { background-color: var(--sc); border-color: var(--sc); box-shadow: 0 3px 8px var(--ss); }
+        .cell .chapter-input.on { color: var(--sc); border-color: var(--sc); background-color: var(--st); }
+        @supports (background-color: color-mix(in srgb, red 10%, white)) {
+            .cell .chapter-input.on { background-color: color-mix(in srgb, var(--sc) var(--tint-pct), var(--card)); }
         }
 
-        /* Row Delete Button */
-        .btn-delete {
+        .btn-delete, .btn-skip {
             background: none;
             border: none;
-            color: #cbd5e1;
+            color: var(--icon);
             cursor: pointer;
-            font-size: 14px;
-            padding: 4px;
+            font-size: 18px;
+            padding: 4px 6px;
+            border-radius: 6px;
+            transition: color 0.2s, background 0.2s;
+        }
+        .btn-delete:hover { color: #ef4444; background: var(--danger-bg); }
+        .btn-skip { font-size: 16px; filter: grayscale(1); opacity: 0.7; }
+        .btn-skip:hover { background: var(--hover-indigo); filter: none; opacity: 1; }
+
+        /* Row grip (drag a whole day's plan) */
+        .row-grip {
+            flex-shrink: 0;
+            width: 18px;
+            text-align: center;
+            font-size: 18px;
+            line-height: 1;
+            color: var(--icon);
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            padding: 6px 0;
             border-radius: 4px;
+        }
+        .row-grip:hover { color: var(--text-2); background: var(--border); }
+
+        /* Drag & drop of slots */
+        .cell { position: relative; }
+        .cell.shiftable { transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
+        .cell.drag-origin { opacity: 0.4; }
+        body.dragging, body.dragging * { cursor: grabbing !important; user-select: none !important; -webkit-user-select: none !important; }
+
+        .drag-float {
+            position: fixed;
+            z-index: 2000;
+            pointer-events: none;
+            background: var(--card);
+            border-radius: 10px;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(100, 116, 139, 0.18);
+            transform: scale(1.03);
+            transform-origin: center;
+        }
+        .drag-float .cell { position: absolute; margin: 0; }
+
+        .cell.landed .subject-group { animation: landed 0.75s ease-out; }
+        @keyframes landed {
+            0%   { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.55); }
+            100% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+        }
+
+        /* Add-days handle */
+        .drag-handle-container {
+            width: 100%;
+            height: 24px;
+            background-color: var(--handle);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: ns-resize;
+            touch-action: none;
+            transition: background 0.2s;
+            user-select: none;
+        }
+
+        .drag-handle-container:hover, .drag-handle-container.active { background-color: var(--handle-hover); }
+        .drag-lines { display: flex; flex-direction: column; gap: 2px; }
+        .drag-lines span { display: block; width: 20px; height: 2px; background-color: var(--icon); }
+
+        /* Controls */
+        .controls {
+            padding: 20px 20px 10px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: var(--card);
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.15s ease;
+            gap: 6px;
         }
 
-        .btn-delete:hover {
-            color: #ef4444;
-            background-color: #fee2e2;
-        }
+        .btn-add { background-color: var(--btn-dark); color: var(--btn-dark-text); }
+        .btn-add:hover { background-color: var(--btn-dark-hover); }
+        .btn-html { background-color: #10b981; color: #fff; }
+        .btn-html:hover { background-color: #059669; }
+        .btn-export { background-color: #3b82f6; color: #fff; }
+        .btn-export:hover { background-color: #2563eb; }
+        .btn-danger { background: var(--card); color: var(--danger); border: 1px solid var(--danger-border); }
+        .btn-danger:hover { background: var(--danger-bg); }
+        .btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--border-strong); }
+        .btn-ghost:hover:not(:disabled) { background: var(--hover); }
+        .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn:focus-visible, .chip:focus-visible, .link-btn:focus-visible, .menu button:focus-visible { outline: 3px solid rgba(59, 130, 246, 0.5); outline-offset: 2px; }
 
-        /* Bottom Minimal Bar */
-        .bottom-bar {
-            padding: 10px 16px;
+        /* Export menu */
+        .menu {
+            position: fixed;
+            z-index: 3500;
+            background: var(--card);
+            border: 1px solid var(--border-strong);
+            border-radius: 10px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+            padding: 6px;
+            min-width: 190px;
             display: flex;
-            justify-content: center;
-            background: #ffffff;
-            border-top: 1px solid var(--border-light);
+            flex-direction: column;
         }
+        .menu {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(6px) scale(0.97);
+            transform-origin: bottom center;
+            transition: opacity 0.16s ease, transform 0.16s ease, visibility 0s linear 0.16s;
+        }
+        .menu.open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: none;
+            transition-delay: 0s;
+        }
+        .menu button {
+            background: none;
+            border: none;
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .menu button:hover { background: var(--hover); }
+        .menu small { display: block; font-weight: 400; color: var(--muted); margin-top: 2px; }
+
+        /* Status line */
+        .status {
+            padding: 4px 20px 14px;
+            text-align: center;
+            font-size: 12.5px;
+            color: var(--muted);
+            background: var(--card);
+        }
+        .status.warn { color: var(--warn); }
+        .link-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: inherit;
+            color: var(--link);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* More options */
+        details.tools { border-top: 1px solid var(--border); background: var(--card); }
+        details.tools > summary {
+            padding: 14px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text);
+            list-style: none;
+            user-select: none;
+        }
+        details.tools > summary::-webkit-details-marker { display: none; }
+        details.tools > summary::before { content: '▸'; display: inline-block; margin-right: 8px; transition: transform 0.2s; }
+        details.tools[open] > summary::before { transform: rotate(90deg); }
+        .tools-body {
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr));
+            gap: 16px;
+            padding: 4px 20px 22px;
+        }
+        .tool-group {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 0;
+        }
+        .tool-group h4 { margin: 0; font-size: 14px; color: var(--heading); }
+        .tool-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .tool-group label { font-size: 13px; display: flex; align-items: center; gap: 6px; color: var(--text-2); }
+        .tool-field { display: flex; align-items: center; gap: 8px; flex: 1 1 220px; min-width: 0; }
+        .tool-field .lbl { font-size: 13px; color: var(--text-2); white-space: nowrap; }
+        .tool-group input[type="number"] {
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            background: var(--card);
+            color: var(--text);
+        }
+        .tool-group input[type="number"] { width: 70px; }
+        .tool-group .btn { padding: 8px 14px; font-size: 13px; }
+        .hint { font-size: 12px; color: var(--muted); margin: 0; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip {
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--border-strong);
+            background: var(--card);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-2);
+            cursor: pointer;
+        }
+        .chip.on { background: var(--active-bg); border-color: var(--active-bg); color: var(--active-text); }
+        .subj-list { display: flex; flex-direction: column; gap: 8px; }
+        .subj-row { display: flex; align-items: center; gap: 8px; }
+        .subj-row input[type="color"] {
+            width: 38px;
+            height: 36px;
+            padding: 2px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--card);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .subj-row input[type="text"] { padding: 8px 10px; }
+
+        /* Nicer date picker used in More options */
+        .datepick { position: relative; flex: 1; min-width: 0; }
+        .dp-face {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 34px 9px 12px;
+            border: 1px solid var(--border-strong);
+            border-radius: 8px;
+            background: var(--card);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            min-height: 38px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .dp-face.empty .dp-text { font-weight: 500; color: var(--muted); }
+        .dp-icon { font-size: 15px; flex-shrink: 0; }
+        .dp-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .datepick:hover .dp-face { border-color: var(--border-hover); }
+        .datepick:focus-within .dp-face { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); }
+        .datepick input[type="date"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .dp-clear {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 3;
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 50%;
+            background: var(--hover);
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+        }
+        .dp-clear:hover { background: var(--danger-bg); color: var(--danger); }
+        .dp-clear[hidden] { display: none; }
 
         /* Toast */
         .toast {
             position: fixed;
-            bottom: 24px;
+            bottom: calc(30px + env(safe-area-inset-bottom, 0px));
             left: 50%;
             transform: translateX(-50%) translateY(20px);
-            background-color: var(--primary);
-            color: white;
-            padding: 8px 18px;
-            border-radius: 20px;
-            font-size: 12px;
+            background-color: var(--toast-bg);
+            color: var(--toast-text);
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
             font-weight: 500;
             opacity: 0;
             pointer-events: none;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: max-content;
+            max-width: calc(100vw - 24px);
         }
-
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.has-action.show { pointer-events: auto; }
+        .toast button {
+            background: var(--toast-btn);
+            color: inherit;
+            border: none;
+            border-radius: 14px;
+            padding: 5px 12px;
+            font-weight: 700;
+            cursor: pointer;
+            flex-shrink: 0;
         }
+        .toast button:hover { background: var(--toast-btn-hover); }
 
-        /* Export mode */
-        .exporting .btn-delete,
-        .exporting .drag-grip,
-        .exporting .step-btns,
-        .exporting .bottom-bar {
-            display: none !important;
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: var(--backdrop);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 4000;
         }
-
-        .exporting .planner-header,
-        .exporting .planner-row {
-            grid-template-columns: 140px 1fr 1fr 1fr 0px;
+        .modal {
+            background: var(--card);
+            color: var(--text);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 580px;
+            max-height: 82vh;
+            overflow: auto;
+            padding: 22px 24px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
         }
+        .modal h3 { margin: 0 0 4px; color: var(--heading); }
+        .modal p { font-size: 13.5px; line-height: 1.5; margin: 8px 0; }
+        .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .modal-close { background: none; border: none; font-size: 26px; cursor: pointer; color: var(--muted); padding: 4px 8px; }
+        .modal-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+        .snap-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+        .snap-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .snap-item small { color: var(--muted); display: block; margin-top: 2px; }
+        .snap-item .btn { padding: 6px 12px; font-size: 13px; flex-shrink: 0; }
 
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
+        /* ---------- Stacked (phone) layout: one card per day ----------
+           Chosen automatically by JS when the table would not fit (class .stacked on the card). */
+        .planner-card.stacked #table-wrap { overflow: visible; }
+        .planner-card.stacked .planner-header { display: none; }
+        .planner-card.stacked .planner-row {
+            grid-template-columns: minmax(0, 1fr) auto;
+            min-width: 0;
+            gap: 10px 8px;
+            padding: 14px 14px;
+        }
+        .planner-card.stacked .col-date { grid-column: 1; grid-row: 1; }
+        .planner-card.stacked .col-actions { grid-column: 2; grid-row: 1; width: auto; }
+        .planner-card.stacked .cell { grid-column: 1 / -1; }
+        .planner-card.stacked .btn-delete, .planner-card.stacked .btn-skip { padding: 8px 10px; font-size: 18px; }
+        .planner-card.stacked .drag-handle-container { height: 30px; }
+        .stacked .subject-group { align-items: flex-end; }
+        .stacked .cell-main { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+        .stacked .cell-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            color: var(--sc);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .stacked .cell.off .cell-label { opacity: 0.6; }
+        .stacked .slot { width: 40px; height: 40px; border-radius: 10px; }
+        .stacked input[type="text"].chapter-input { padding: 11px 12px; font-size: 16px; }
+        .stacked .date-display { padding: 12px 10px; font-size: 15px; }
+        .stacked .row-grip { width: 26px; font-size: 20px; padding: 8px 0; }
+
+        /* Export / print: hide the interactive chrome */
+        .planner-card.exporting { --cols: 150px repeat(var(--n), minmax(0, 1fr)); }
+        .exporting .controls, .exporting .status, .exporting details.tools,
+        .exporting .drag-handle-container, .exporting .btn-delete, .exporting .btn-skip,
+        .exporting .row-grip, .exporting .col-actions { display: none !important; }
+        .exporting #table-wrap { overflow: visible; }
+        .exporting .planner-row { break-inside: avoid; }
+
+        @media (max-width: 720px) {
             body {
-                padding: 12px 8px;
+                padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
             }
-
-            .header-container {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
+            .topbar { margin-bottom: 12px; }
+            .topbar h2 { font-size: 18px; }
+            .ptab-main { padding: 10px 16px; }
+            .ptab-add { padding: 9px 14px; }
+            .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 14px 8px; }
+            .controls .btn { min-height: 44px; }
+            .status { padding: 4px 14px 14px; }
+            details.tools > summary { padding: 16px 14px; }
+            .tools-body { padding: 4px 12px 18px; }
+            .tool-group { padding: 14px 12px; }
+            .tool-group .btn { min-height: 40px; }
+            .tool-group input[type="number"], .subj-row input[type="text"], .ptab input.ptab-input, .dp-face { font-size: 16px; }
+            .chip { padding: 8px 14px; }
+            .tool-field { flex-basis: 100%; }
+            .modal-backdrop { padding: 0; align-items: flex-end; }
+            .modal {
+                max-width: none;
+                max-height: 88vh;
+                border-radius: 18px 18px 0 0;
+                padding: 18px 16px calc(20px + env(safe-area-inset-bottom));
             }
+            .toast { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); font-size: 13.5px; padding: 11px 18px; }
+        }
 
-            .toolbar {
-                justify-content: space-between;
-            }
+        @media print {
+            body { padding: 0; background: #fff; }
+            .topbar h2 { margin: 0 0 10px; }
+            .banner, .toast, .modal-backdrop, .profile-bar, .menu, .icon-btn, .tb-side { display: none !important; }
+            .planner-card { box-shadow: none; max-width: none; border-radius: 0; --cols: 150px repeat(var(--n), minmax(0, 1fr)); }
+            .controls, .status, details.tools, .drag-handle-container, .btn-delete, .btn-skip,
+            .row-grip, .col-actions { display: none !important; }
+            #table-wrap { overflow: visible; }
+            .planner-header, .planner-row { min-width: 0; break-inside: avoid; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            @page { size: A4 landscape; margin: 10mm; }
+        }
 
-            .planner-header {
-                display: none;
-            }
+        /* ---------- Motion ---------- */
+        @keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        @keyframes rowIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+        @keyframes rowSwap { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        @keyframes rowFlash { 0% { background-color: rgba(59, 130, 246, 0.28); } 100% { background-color: transparent; } }
+        @keyframes pop { 0% { transform: scale(0.7); } 55% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        @keyframes dateFlash { 0% { background-color: rgba(59, 130, 246, 0.35); transform: scale(1.04); } 100% { background-color: var(--surface); transform: none; } }
+        @keyframes tabIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+        @keyframes modalOut { to { opacity: 0; transform: translateY(10px) scale(0.98); } }
+        @keyframes sheetIn { from { transform: translateY(100%); } to { transform: none; } }
+        @keyframes sheetOut { to { transform: translateY(100%); } }
 
-            .planner-row {
-                display: flex;
-                flex-direction: column;
-                align-items: stretch;
-                gap: 6px;
-                padding: 10px;
-            }
+        .topbar { animation: riseIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+        .profile-bar { animation: riseIn 0.45s 0.05s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+        .planner-card { animation: riseIn 0.5s 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
 
-            .planner-row .col:first-child {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+        .planner-row.row-in { animation: rowIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+        .planner-row.row-flash { animation: rowFlash 1.1s ease-out; }
+        .planner-row.row-in.row-flash { animation: rowIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) backwards, rowFlash 1.1s ease-out; }
+        .swap .planner-row { animation: rowSwap 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: calc(var(--i, 0) * 24ms); }
+        .slot.pop { animation: pop 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .date-display.flash { animation: dateFlash 0.6s ease-out; }
+        .subj-row { animation: fadeUp 0.25s ease backwards; animation-delay: calc(var(--i, 0) * 30ms); }
 
-            .planner-row .col:last-child {
-                display: flex;
-                justify-content: flex-end;
-            }
+        .ptab { transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+        .ptab.tab-in { animation: tabIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .ptab-edit {
+            max-width: 0;
+            overflow: hidden;
+            padding: 6px 0;
+            opacity: 0;
+            visibility: hidden;
+            transition: max-width 0.22s ease, padding 0.22s ease, opacity 0.2s ease, visibility 0s linear 0.22s;
+        }
+        .ptab.active .ptab-edit { max-width: 44px; padding: 6px 12px 6px 0; opacity: 0.75; visibility: visible; transition-delay: 0s; }
+        .ptab.active .ptab-edit:hover { opacity: 1; }
 
-            .step-btns {
-                opacity: 1;
+        .chip { transition: background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.12s; }
+        .icon-btn, .ptab-add { transition: background-color 0.2s, border-color 0.2s, transform 0.12s; }
+        .btn-add:hover, .btn-html:hover, .btn-export:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18); }
+        .btn:not(:disabled):active, .chip:active, .icon-btn:active, .ptab-add:active, .menu button:active { transform: scale(0.96); box-shadow: none; }
+
+        .modal-backdrop { animation: fadeIn 0.18s ease; }
+        .modal { animation: modalIn 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .modal-backdrop.closing { animation: fadeOut 0.18s ease forwards; pointer-events: none; }
+        .modal-backdrop.closing .modal { animation: modalOut 0.18s ease forwards; }
+
+        /* colour changes glide when switching theme */
+        .theme-anim, .theme-anim *, .theme-anim *::before, .theme-anim *::after {
+            transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease, fill 0.35s ease !important;
+        }
+
+        @media (max-width: 720px) {
+            .modal { animation-name: sheetIn; }
+            .modal-backdrop.closing .modal { animation-name: sheetOut; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-delay: 0s !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                transition-delay: 0s !important;
+                scroll-behavior: auto !important;
             }
         }
     </style>
 </head>
 <body>
 
-    <div class="header-container">
-        <div class="title-group">
-            <span class="title-badge">3S</span>
-            <h1 id="planner-title" contenteditable="true" spellcheck="false" title="Click to rename planner">3-Subject Study Planner</h1>
-        </div>
-
-        <div class="toolbar">
-            <button class="btn" onclick="shiftAllDates(-1)" title="Shift all dates back 1 day">◀ -1d</button>
-            <button class="btn" onclick="shiftAllDates(1)" title="Shift all dates forward 1 day">+1d ▶</button>
-            <button class="btn btn-amber" onclick="skipSundays()" title="Skip Sunday study days">☀️ Skip Sundays</button>
-            <button class="btn" onclick="promptSkipSpecificDay()" title="Skip a specific date and push upcoming days forward">📅 Skip Date...</button>
-            <button class="btn btn-primary" onclick="addRow(true)" title="Add new study day">+ Add Day</button>
-            <button class="btn" onclick="exportImage()" title="Export clean image">🖼️ Export Image</button>
-            <button class="btn" onclick="exportHTML()" title="Save self-contained single HTML file">💾 Save HTML</button>
-            <div class="storage-status">
-                <span class="status-dot" id="status-dot"></span>
-                <span id="status-text">Saved</span>
-            </div>
-        </div>
+    <div class="topbar">
+        <span class="tb-side" aria-hidden="true"></span>
+        <h2 id="page-title">Study Progression Planner</h2>
+        <button class="icon-btn" id="btn-theme" type="button" title="Dark mode" aria-label="Switch to dark mode">🌙</button>
     </div>
+
+    <div id="storage-banner" class="banner" role="alert" hidden>
+        ⚠️ This browser is blocking storage here (private mode, an in-app browser, or a locked-down setting),
+        so your changes can't be remembered. Use <b>Save HTML</b> or <b>Backups → Download backup</b> to keep your plan.
+    </div>
+
+    <div class="profile-bar" id="profile-bar" role="tablist" aria-label="Profiles"></div>
 
     <div class="planner-card" id="planner-card">
-        <div class="planner-header">
-            <div>Date</div>
-            <div class="header-subject"><span class="sub-dot dot-m"></span>Maths</div>
-            <div class="header-subject"><span class="sub-dot dot-p"></span>Physics</div>
-            <div class="header-subject"><span class="sub-dot dot-c"></span>Chemistry</div>
-            <div></div>
+        <div id="table-wrap">
+            <div class="planner-header" id="planner-head"></div>
+            <div id="rows-container"></div>
         </div>
 
-        <div id="rows-container"></div>
-
-        <div class="bottom-bar">
-            <button class="btn" onclick="addRow(true)">+ Add Another Day</button>
+        <div class="drag-handle-container" id="drag-handle" title="Drag down to add consecutive days">
+            <div class="drag-lines"><span></span><span></span><span></span></div>
         </div>
+
+        <div class="controls">
+            <button class="btn btn-ghost" id="btn-undo" type="button" disabled>↶ Undo</button>
+            <button class="btn btn-html" id="btn-html" type="button">💾 Save HTML</button>
+            <button class="btn btn-export" id="btn-export" type="button" aria-haspopup="menu" aria-expanded="false">📤 Export ▾</button>
+            <button class="btn btn-ghost" id="btn-backups" type="button">🗂️ Backups</button>
+        </div>
+
+        <div class="status" id="status" aria-live="polite"></div>
+
+        <details class="tools" id="tools">
+            <summary>⚙️ More options — profile, subjects, add days, shift dates, skip days</summary>
+            <div class="tools-body">
+
+                <div class="tool-group">
+                    <h4>This profile</h4>
+                    <div class="tool-row">
+                        <button class="btn btn-ghost" id="btn-rename" type="button">✎ Rename</button>
+                        <button class="btn btn-ghost" id="btn-dup" type="button">⧉ Duplicate</button>
+                        <button class="btn btn-danger" id="btn-del" type="button">🗑 Delete</button>
+                    </div>
+                    <p class="hint">Profiles are separate plans (e.g. Main, Backlog, Practice). Use the tabs above to switch, or double-click a tab to rename it.</p>
+                </div>
+
+                <div class="tool-group">
+                    <h4>Subjects in this profile</h4>
+                    <div class="chips" id="count-chips" role="group" aria-label="Number of subjects">
+                        <button type="button" class="chip" data-n="1" aria-pressed="false">1</button>
+                        <button type="button" class="chip" data-n="2" aria-pressed="false">2</button>
+                        <button type="button" class="chip" data-n="3" aria-pressed="false">3</button>
+                        <button type="button" class="chip" data-n="4" aria-pressed="false">4</button>
+                        <button type="button" class="chip" data-n="5" aria-pressed="false">5</button>
+                        <button type="button" class="chip" data-n="6" aria-pressed="false">6</button>
+                    </div>
+                    <div class="subj-list" id="subject-list"></div>
+                    <p class="hint">Lowering the number only hides subjects — their chapters come back if you raise it again.</p>
+                </div>
+
+                <div class="tool-group">
+                    <h4>Add days</h4>
+                    <div class="tool-row">
+                        <button class="btn btn-add" id="btn-add" type="button">+ Add 1 Day</button>
+                    </div>
+                    <div class="tool-row">
+                        <label>Or add <input type="number" id="add-n" min="1" max="60" value="7"> days</label>
+                        <button class="btn btn-ghost" id="btn-add-n" type="button">Add</button>
+                    </div>
+                    <p class="hint">You can also drag the grey bar under the table downwards.</p>
+                </div>
+
+                <div class="tool-group">
+                    <h4>Shift every date</h4>
+                    <div class="tool-row">
+                        <button class="btn btn-add" id="btn-minus1" type="button">−1 day to all</button>
+                        <button class="btn btn-add" id="btn-plus1" type="button">+1 day to all</button>
+                    </div>
+                    <div class="tool-row">
+                        <label>Or by <input type="number" id="shift-n" min="1" max="365" value="7"> days</label>
+                        <button class="btn btn-ghost" id="btn-shift-earlier" type="button">Earlier</button>
+                        <button class="btn btn-ghost" id="btn-shift-later" type="button">Later</button>
+                    </div>
+                    <p class="hint">Chapters stay with their day; only the dates move.</p>
+                </div>
+
+                <div class="tool-group">
+                    <h4>Skip weekdays &amp; push the plan forward</h4>
+                    <div class="chips" id="skip-chips">
+                        <button type="button" class="chip" data-wd="1" aria-pressed="false">Mon</button>
+                        <button type="button" class="chip" data-wd="2" aria-pressed="false">Tue</button>
+                        <button type="button" class="chip" data-wd="3" aria-pressed="false">Wed</button>
+                        <button type="button" class="chip" data-wd="4" aria-pressed="false">Thu</button>
+                        <button type="button" class="chip" data-wd="5" aria-pressed="false">Fri</button>
+                        <button type="button" class="chip" data-wd="6" aria-pressed="false">Sat</button>
+                        <button type="button" class="chip on" data-wd="0" aria-pressed="true">Sun</button>
+                    </div>
+                    <div class="tool-row">
+                        <div class="tool-field"><span class="lbl">Starting from</span><div class="datepick"><div class="dp-face empty"><span class="dp-icon" aria-hidden="true">📅</span><span class="dp-text" data-ph="Whole plan">Whole plan</span></div><input type="date" id="skip-from" aria-label="Start skipping from this date (optional)"><button type="button" class="dp-clear" hidden aria-label="Clear date">×</button></div></div>
+                        <button class="btn btn-add" id="btn-skip-days" type="button">Skip selected days</button>
+                    </div>
+                    <p class="hint">Study days that land on a skipped weekday move to the next free day, leaving a blank rest row. Leave the date empty to apply to the whole plan.</p>
+                </div>
+
+                <div class="tool-group">
+                    <h4>Skip one specific day</h4>
+                    <div class="tool-row">
+                        <div class="tool-field"><div class="datepick"><div class="dp-face empty"><span class="dp-icon" aria-hidden="true">📅</span><span class="dp-text" data-ph="Pick a day">Pick a day</span></div><input type="date" id="skip-date" aria-label="Day to skip"><button type="button" class="dp-clear" hidden aria-label="Clear date">×</button></div></div>
+                        <button class="btn btn-add" id="btn-skip-date" type="button">Skip &amp; push forward</button>
+                    </div>
+                    <p class="hint">Tip: the 💤 button on any row does this for that row's day.</p>
+                </div>
+
+                <div class="tool-group">
+                    <h4>Tidy up</h4>
+                    <div class="tool-row">
+                        <button class="btn btn-ghost" id="btn-consecutive" type="button">Make dates consecutive</button>
+                    </div>
+                    <p class="hint">Closes date gaps (for example after deleting a day). Every action here can be undone.</p>
+                </div>
+
+            </div>
+        </details>
     </div>
 
-    <div id="toast" class="toast">Message</div>
+    <div id="export-menu" class="menu" role="menu">
+        <button type="button" role="menuitem" id="exp-img">🖼️ Image (PNG)<small>Works offline, same on every device</small></button>
+        <button type="button" role="menuitem" id="exp-pdf">📄 PDF<small>A4 landscape · works offline</small></button>
+    </div>
 
-    <script id="planner-script">
-        const container = document.getElementById('rows-container');
-        const statusDot = document.getElementById('status-dot');
-        const statusText = document.getElementById('status-text');
-        const plannerTitle = document.getElementById('planner-title');
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-        const DB_NAME = 'SyncStudySingleDB';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'planner';
-        const STORAGE_KEY = 'studyPlannerData_v3subs';
-        let db = null;
-        let saveTimeout = null;
+    <!-- Your plans are stored inside this file when you use "Save HTML". Don't edit by hand. -->
+    <script id="embedded-data" type="application/json"></script>
 
-        // Initialize IndexedDB (survives cookie resets)
-        function initDB() {
-            return new Promise((resolve) => {
-                if (!window.indexedDB) return resolve(null);
-                const req = indexedDB.open(DB_NAME, DB_VERSION);
-                req.onupgradeneeded = (e) => {
-                    const database = e.target.result;
-                    if (!database.objectStoreNames.contains(STORE_NAME)) {
-                        database.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                    }
-                };
-                req.onsuccess = () => {
-                    db = req.result;
-                    resolve(db);
-                };
-                req.onerror = () => resolve(null);
-            });
+    <script>
+    (() => {
+        'use strict';
+
+        /* ------------------------------------------------------------------ *
+         * Constants & small helpers
+         * ------------------------------------------------------------------ */
+        const MAX_SUBJ = 6;
+        const DEFAULT_COUNT = 3;
+        const MAX_PROFILES = 30;
+        const DEFAULT_SUBJECTS = [
+            { name: 'Maths',     color: '#ef4444' },
+            { name: 'Physics',   color: '#3b82f6' },
+            { name: 'Chemistry', color: '#10b981' },
+            { name: 'Subject 4', color: '#f59e0b' },
+            { name: 'Subject 5', color: '#8b5cf6' },
+            { name: 'Subject 6', color: '#ec4899' }
+        ];
+        const LS_KEY = 'studyPlanner.v3';
+        const LS_V2_KEY = 'studyPlanner.v2';                // previous version (single plan)
+        const LEGACY_LS_KEY = 'studyPlannerData_v3subs';    // the original version of this planner
+        const BK_KEY = 'studyPlanner.lastBackup';
+        const SNAP_LS_KEY = 'studyPlanner.snapshots';
+        const DB_NAME = 'studyPlannerDB';
+        const MAX_SNAPSHOTS = 80;
+        const AUTO_SNAPSHOT_GAP = 20 * 60 * 1000;
+        const DAY = 86400000;
+        const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const WD_PLURAL = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
+        const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        const $ = (id) => document.getElementById(id);
+        const container = $('rows-container');
+        const clone = (o) => JSON.parse(JSON.stringify(o));
+        const pad2 = (n) => String(n).padStart(2, '0');
+        const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+
+        function el(tag, cls, text) {
+            const e = document.createElement(tag);
+            if (cls) e.className = cls;
+            if (text != null) e.textContent = text;
+            return e;
         }
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            await initDB();
-            loadData();
-            container.addEventListener('input', triggerAutoSave);
-            plannerTitle.addEventListener('input', triggerAutoSave);
+        /* Colours */
+        const colorOk = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+        function rgbOf(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+        function tintOf(h, t) { const f = (v) => Math.round(v + (255 - v) * (t == null ? 0.92 : t)); const [r, g, b] = rgbOf(h); return 'rgb(' + f(r) + ',' + f(g) + ',' + f(b) + ')'; }
+        function alphaOf(h, a) { const [r, g, b] = rgbOf(h); return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')'; }
+
+        /* Dates are handled as plain YYYY-MM-DD strings and UTC maths, so time zones can't shift a day. */
+        function parseISO(s) {
+            if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+            const [y, m, d] = s.split('-').map(Number);
+            const t = Date.UTC(y, m - 1, d);
+            return Number.isNaN(t) ? null : t;
+        }
+        function toISO(t) {
+            const s = new Date(t).toISOString().slice(0, 10);
+            return /^\d{4}-/.test(s) ? s : '';
+        }
+        function addDays(s, n) {
+            const t = parseISO(s);
+            if (t === null) return s;
+            return toISO(t + n * DAY) || s;
+        }
+        function todayISO() {
+            const d = new Date();   // the user's *local* today
+            return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+        }
+        function weekdayOf(s) {
+            const t = parseISO(s);
+            return t === null ? -1 : new Date(t).getUTCDay();
+        }
+        function formatDateDisplay(iso) {
+            const t = parseISO(iso);
+            if (t === null) return 'Select Date';
+            const d = new Date(t);
+            return WD[d.getUTCDay()] + ', ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()];
+        }
+        function fmtStamp(ts) {
+            try { return new Date(ts).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+            catch (e) { return new Date(ts).toISOString(); }
+        }
+        function relDays(ts) {
+            if (!ts) return 'never';
+            const d = Math.floor((Date.now() - ts) / DAY);
+            return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago';
+        }
+        const safeName = (s) => (String(s || '').trim().replace(/[\\/:*?"<>|\s]+/g, '-').replace(/^-+|-+$/g, '') || 'Plan').slice(0, 40);
+
+        /* ------------------------------------------------------------------ *
+         * Data model
+         *   workspace  = { activeId, profiles: [profile, ...] }
+         *   profile    = { id, name, count (1-6 visible subjects), subjects:[6 x {name,color}], rows:[row, ...] }
+         *   row        = { date:'YYYY-MM-DD', cells:[6 x {on:bool, v:string}] }
+         * ------------------------------------------------------------------ */
+        let ws = { activeId: '', profiles: [] };
+        let rev = 0;   // "last changed" timestamp, used to pick the newest copy when several exist
+
+        const str = (v) => (typeof v === 'string' ? v.slice(0, 200) : '');
+        const defaultSubjects = () => DEFAULT_SUBJECTS.map((s) => ({ ...s }));
+        const newCells = () => Array.from({ length: MAX_SUBJ }, () => ({ on: false, v: '' }));
+        const newRow = (date) => ({ date: date || '', cells: newCells() });
+        function defaultRows() {
+            const out = [];
+            let d = todayISO();
+            for (let i = 0; i < 5; i++) { out.push(newRow(d)); d = addDays(d, 1); }
+            return out;
+        }
+        function makeProfile(name, rowList) {
+            return { id: uid(), name, count: DEFAULT_COUNT, subjects: defaultSubjects(), rows: rowList || defaultRows() };
+        }
+
+        function sanitizeRow(r) {
+            const cells = newCells();
+            if (r && Array.isArray(r.cells)) {
+                r.cells.slice(0, MAX_SUBJ).forEach((c, i) => { if (c && typeof c === 'object') cells[i] = { on: !!c.on, v: str(c.v) }; });
+            } else if (r) {   // rows from the earlier versions: m / p / c
+                [['m', 'mVal'], ['p', 'pVal'], ['c', 'cVal']].forEach((pair, i) => { cells[i] = { on: !!r[pair[0]], v: str(r[pair[1]]) }; });
+            }
+            return { date: r && parseISO(r.date) !== null ? r.date : '', cells };
+        }
+        function sanitizeProfile(o) {
+            if (!o || typeof o !== 'object' || !Array.isArray(o.rows)) return null;
+            const subjects = defaultSubjects();
+            if (Array.isArray(o.subjects)) {
+                o.subjects.slice(0, MAX_SUBJ).forEach((s, i) => {
+                    if (s && typeof s === 'object') {
+                        subjects[i] = {
+                            name: typeof s.name === 'string' ? s.name.slice(0, 24) : subjects[i].name,
+                            color: colorOk(s.color) ? s.color.toLowerCase() : subjects[i].color
+                        };
+                    }
+                });
+            }
+            let count = parseInt(o.count, 10);
+            if (!(count >= 1 && count <= MAX_SUBJ)) count = DEFAULT_COUNT;
+            return {
+                id: typeof o.id === 'string' && o.id ? o.id.slice(0, 40) : uid(),
+                name: (typeof o.name === 'string' && o.name.trim() ? o.name.trim() : 'My plan').slice(0, 40),
+                count, subjects,
+                rows: o.rows.slice(0, 1000).filter((r) => r && typeof r === 'object').map(sanitizeRow)
+            };
+        }
+        // Accepts a v3 workspace, a v2 single plan ({rows}), or the original bare array of rows.
+        function sanitizeWs(o) {
+            if (!o || typeof o !== 'object') return null;
+            let profiles = null;
+            if (Array.isArray(o)) { const p = sanitizeProfile({ rows: o, name: 'My plan' }); profiles = p ? [p] : null; }
+            else if (Array.isArray(o.profiles)) profiles = o.profiles.map(sanitizeProfile).filter(Boolean).slice(0, MAX_PROFILES);
+            else if (Array.isArray(o.rows)) { const p = sanitizeProfile({ rows: o.rows, name: 'My plan' }); profiles = p ? [p] : null; }
+            if (!profiles || !profiles.length) return null;
+            const seen = new Set();
+            profiles.forEach((p) => { if (seen.has(p.id)) p.id = uid(); seen.add(p.id); });
+            return { activeId: profiles.some((p) => p.id === o.activeId) ? o.activeId : profiles[0].id, profiles };
+        }
+
+        const cur = () => ws.profiles.find((p) => p.id === ws.activeId) || ws.profiles[0];
+        const isRest = (r) => !r.cells.slice(0, cur().count).some((c) => c.on);
+        const isDefaultConfig = (p) => p.count === DEFAULT_COUNT && p.subjects.every((s, i) => s.name === DEFAULT_SUBJECTS[i].name && s.color === DEFAULT_SUBJECTS[i].color);
+        const isBlankProfile = (p) => p.rows.every((r) => r.cells.every((c) => !c.on && !c.v)) && isDefaultConfig(p);
+        const isBlankWs = (w) => w.profiles.length === 1 && isBlankProfile(w.profiles[0]);
+        const plannedCount = (p) => p.rows.reduce((n, r) => n + r.cells.slice(0, p.count).filter((c) => c.on).length, 0);
+        const totalDays = (w) => w.profiles.reduce((n, p) => n + p.rows.length, 0);
+        const subjName = (i) => (cur().subjects[i].name || '').trim() || ('Subject ' + (i + 1));
+        function nextDate() {
+            const list = cur().rows;
+            for (let i = list.length - 1; i >= 0; i--) {
+                if (parseISO(list[i].date) !== null) return addDays(list[i].date, 1);
+            }
+            return todayISO();
+        }
+        const getPayload = () => ({ app: 'study-planner', v: 3, updatedAt: rev, activeId: ws.activeId, profiles: ws.profiles });
+
+        /* ------------------------------------------------------------------ *
+         * Reliable storage
+         *   1. localStorage        (fast, synchronous - written on every change)
+         *   2. IndexedDB           (second independent copy)
+         *   3. Restore points      (rolling per-profile history in IndexedDB, see "Backups")
+         *   4. Save HTML / .json   (your plans live inside the file you download)
+         *   + asks the browser for "persistent" storage so it isn't auto-cleared
+         * ------------------------------------------------------------------ */
+        let db = null;
+        let saveTimer = null;
+        let lastSavedAt = null;
+        let storageOK = true;
+        let persisted = null;
+        let lastBackup = 0;
+        let dirtySinceBackup = false;
+        let lastTs = 0;
+        const lastSnap = {};   // profileId -> { at, json }
+        const nextTs = () => { lastTs = Math.max(Date.now(), lastTs + 1); return lastTs; };
+
+        try { lastBackup = Number(localStorage.getItem(BK_KEY)) || 0; } catch (e) { /* storage blocked */ }
+
+        function openDB() {
+            return new Promise((resolve) => {
+                try {
+                    const rq = indexedDB.open(DB_NAME, 1);
+                    rq.onupgradeneeded = () => {
+                        const d = rq.result;
+                        d.createObjectStore('state');
+                        d.createObjectStore('snapshots', { keyPath: 'ts' });
+                    };
+                    rq.onsuccess = () => resolve(rq.result);
+                    rq.onerror = () => resolve(null);
+                    rq.onblocked = () => resolve(null);
+                } catch (e) { resolve(null); }
+            });
+        }
+        function idbRun(store, mode, fn) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const tx = db.transaction(store, mode);
+                    const req = fn(tx.objectStore(store));
+                    tx.oncomplete = () => resolve(req ? req.result : undefined);
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error || new Error('aborted'));
+                } catch (e) { reject(e); }
+            });
+        }
+        function writeLS(json) { try { localStorage.setItem(LS_KEY, json); return true; } catch (e) { return false; } }
+        function readLSJSON(key) { try { const t = localStorage.getItem(key); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
+
+        function scheduleSave() {
+            dirtySinceBackup = true;
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => saveNow(true), 300);
+            setStatus();
+        }
+
+        async function saveNow(touch) {
+            clearTimeout(saveTimer);
+            saveTimer = null;
+            if (touch) rev = Math.max(Date.now(), rev + 1);
+            const payload = getPayload();
+            const okLS = writeLS(JSON.stringify(payload));   // synchronous, so it also works inside pagehide
+            let okDB = false;
+            if (db) {
+                try { await idbRun('state', 'readwrite', (s) => s.put(payload, 'current')); okDB = true; } catch (e) { /* ignore */ }
+            }
+            storageOK = okLS || okDB;
+            if (storageOK) {
+                const p = cur();
+                const e = lastSnap[p.id];
+                if (!e || Date.now() - e.at > AUTO_SNAPSHOT_GAP) snapshotProfile(p, 'Automatic');
+            }
+            if (storageOK) lastSavedAt = new Date();
+            setStatus();
+        }
+        function flushSave() { if (saveTimer) saveNow(true); }
+
+        /* restore points: { ts, reason, profile } */
+        async function snapAdd(snap) {
+            if (db) {
+                try {
+                    await idbRun('snapshots', 'readwrite', (s) => s.put(snap));
+                    const keys = await idbRun('snapshots', 'readonly', (s) => s.getAllKeys());
+                    if (keys.length > MAX_SNAPSHOTS) {
+                        const del = keys.slice(0, keys.length - MAX_SNAPSHOTS);
+                        await idbRun('snapshots', 'readwrite', (s) => { del.forEach((k) => s.delete(k)); return null; });
+                    }
+                    return;
+                } catch (e) { /* fall through to localStorage */ }
+            }
+            try {
+                const list = readLSJSON(SNAP_LS_KEY) || [];
+                list.push(snap);
+                localStorage.setItem(SNAP_LS_KEY, JSON.stringify(list.slice(-10)));
+            } catch (e) { /* nowhere to store it */ }
+        }
+        async function snapList() {
+            let list = [];
+            if (db) { try { list = await idbRun('snapshots', 'readonly', (s) => s.getAll()); } catch (e) { list = []; } }
+            if (!list.length) list = readLSJSON(SNAP_LS_KEY) || [];
+            return list.map((s) => {
+                if (!s) return null;
+                const profile = sanitizeProfile(s.profile || { rows: s.rows, name: 'Earlier plan' });   // old snapshots only had rows
+                return profile ? { ts: s.ts, reason: s.reason, profile } : null;
+            }).filter(Boolean).sort((a, b) => b.ts - a.ts);
+        }
+        // Copies the profile synchronously, so call it BEFORE changing anything.
+        function snapshotProfile(p, reason, minGapMs) {
+            if (!p || isBlankProfile(p)) return;
+            const e = lastSnap[p.id] || { at: 0, json: null };
+            if (minGapMs && Date.now() - e.at < minGapMs) return;
+            const copy = clone(p);
+            const json = JSON.stringify(copy);
+            if (json === e.json) { lastSnap[p.id] = { at: Date.now(), json }; return; }
+            lastSnap[p.id] = { at: Date.now(), json };
+            snapAdd({ ts: nextTs(), reason, profile: copy });
+        }
+
+        async function askPersist() {
+            try {
+                if (navigator.storage && navigator.storage.persist) {
+                    persisted = await navigator.storage.persist();
+                    setStatus();
+                }
+            } catch (e) { /* not supported */ }
+        }
+
+        function readEmbedded() {
+            try {
+                const t = $('embedded-data').textContent.trim();
+                if (!t) return null;
+                const o = JSON.parse(t);
+                const w = sanitizeWs(o);
+                return w ? { src: 'file', ts: Number(o.updatedAt) || 0, ws: w } : null;
+            } catch (e) { return null; }
+        }
+
+        async function gatherLocalCandidates() {
+            const list = [];
+            const add = (o, src, ts, migrated) => { const w = sanitizeWs(o); if (w) list.push({ src, ts, ws: w, migrated: !!migrated }); };
+            const v3 = readLSJSON(LS_KEY);
+            if (v3) add(v3, 'browser', Number(v3.updatedAt) || 0, false);
+            if (db) {
+                try {
+                    const o = await idbRun('state', 'readonly', (s) => s.get('current'));
+                    if (o) add(o, 'browser', Number(o.updatedAt) || 0, o.v !== 3);
+                } catch (e) { /* ignore */ }
+            }
+            const v2 = readLSJSON(LS_V2_KEY);
+            if (v2) add(v2, 'browser', Number(v2.updatedAt) || 0, true);
+            const legacy = readLSJSON(LEGACY_LS_KEY);   // the original version of this planner
+            if (Array.isArray(legacy) && legacy.length) add(legacy, 'legacy', 1, true);
+            return list.sort((a, b) => b.ts - a.ts);
+        }
+
+        /* ------------------------------------------------------------------ *
+         * Toast, modal, status
+         * ------------------------------------------------------------------ */
+        let toastTimer = null;
+        function showToast(message, action) {
+            const t = $('toast');
+            t.textContent = '';
+            t.appendChild(el('span', '', message));
+            t.classList.toggle('has-action', !!action);
+            if (action) {
+                const b = el('button', '', action.label);
+                b.type = 'button';
+                b.addEventListener('click', () => { t.classList.remove('show'); action.fn(); });
+                t.appendChild(b);
+            }
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), action ? 7000 : 3200);
+        }
+
+        function openModal(title, bodyNode, opts) {
+            opts = opts || {};
+            const back = el('div', 'modal-backdrop');
+            const box = el('div', 'modal');
+            box.setAttribute('role', 'dialog');
+            box.setAttribute('aria-modal', 'true');
+            const head = el('div', 'modal-head');
+            head.appendChild(el('h3', '', title));
+            const closeBtn = el('button', 'modal-close', '×');
+            closeBtn.type = 'button';
+            closeBtn.setAttribute('aria-label', 'Close');
+            head.appendChild(closeBtn);
+            box.append(head, bodyNode);
+            back.appendChild(box);
+            let closed = false;
+            const close = () => {
+                if (closed) return;
+                closed = true;
+                document.removeEventListener('keydown', onKey);
+                if (reduceMotion()) back.remove();
+                else { back.classList.add('closing'); setTimeout(() => back.remove(), 200); }
+                if (opts.onClose) opts.onClose();
+            };
+            const onKey = (e) => { if (e.key === 'Escape') close(); };
+            closeBtn.addEventListener('click', close);
+            back.addEventListener('mousedown', (e) => { if (e.target === back) close(); });
+            document.addEventListener('keydown', onKey);
+            document.body.appendChild(back);
+            const first = box.querySelector('button.btn');
+            if (first) first.focus();
+            return { close };
+        }
+
+        function setStatus() {
+            const s = $('status');
+            const parts = [];
+            if (saveTimer) parts.push('Saving…');
+            else if (!storageOK) parts.push('⚠ Auto-save is not working in this browser');
+            else parts.push('✓ Auto-saved' + (lastSavedAt ? ' at ' + pad2(lastSavedAt.getHours()) + ':' + pad2(lastSavedAt.getMinutes()) : ''));
+            if (persisted === true) parts.push('🔒 protected storage');
+            parts.push('last file backup: ' + relDays(lastBackup));
+            s.textContent = parts.join(' · ') + ' · ';
+            const b = el('button', 'link-btn', 'Download backup');
+            b.type = 'button';
+            b.addEventListener('click', downloadJSON);
+            s.appendChild(b);
+            const stale = !lastBackup || Date.now() - lastBackup > 7 * DAY;
+            s.classList.toggle('warn', !storageOK || (stale && ws.profiles.length > 0 && !isBlankWs(ws)));
+            $('storage-banner').hidden = storageOK;
+        }
+        function markBackup() {
+            lastBackup = Date.now();
+            dirtySinceBackup = false;
+            try { localStorage.setItem(BK_KEY, String(lastBackup)); } catch (e) { /* ignore */ }
+            setStatus();
+        }
+
+        /* ------------------------------------------------------------------ *
+         * Undo (whole workspace, so profile and subject changes are undoable too)
+         * ------------------------------------------------------------------ */
+        const undoStack = [];
+        let typingUntil = 0;
+        function pushUndo(label) {
+            undoStack.push({ label, ws: clone(ws) });
+            if (undoStack.length > 100) undoStack.shift();
+            updateUndoBtn();
+        }
+        // Typing creates one undo step per burst, not one per keystroke. Call BEFORE changing the data.
+        function noteTyping(label) {
+            const now = Date.now();
+            if (now > typingUntil) pushUndo(label);
+            typingUntil = now + 1500;
+        }
+        function undo() {
+            const s = undoStack.pop();
+            if (!s) return;
+            ws = s.ws;
+            typingUntil = 0;
+            animateNext('swap');
+            renderAll();
+            scheduleSave();
+            showToast('Undid: ' + s.label);
+        }
+        function updateUndoBtn() {
+            const b = $('btn-undo');
+            b.disabled = !undoStack.length;
+            b.title = undoStack.length ? 'Undo: ' + undoStack[undoStack.length - 1].label + ' (Ctrl/Cmd+Z)' : 'Nothing to undo';
+        }
+        // Runs a bulk change with undo + a persistent restore point.
+        function commitOp(label, mutate, message, noSnapshot) {
+            pushUndo(label);
+            if (!noSnapshot) snapshotProfile(cur(), 'Before: ' + label);
+            mutate();
+            renderAll();
+            scheduleSave();
+            showToast(message, { label: 'Undo', fn: undo });
+        }
+
+        /* ------------------------------------------------------------------ *
+         * Rendering
+         * ------------------------------------------------------------------ */
+        function styleCell(cell, subj) {
+            cell.style.setProperty('--sc', subj.color);
+            cell.style.setProperty('--st', tintOf(subj.color));
+            cell.style.setProperty('--ss', alphaOf(subj.color, 0.4));
+        }
+        function updateLayoutVars() {
+            const n = cur().count;
+            const root = document.documentElement.style;
+            root.setProperty('--n', String(n));
+            root.setProperty('--cardw', (n <= 3 ? 1200 : 1200 + (n - 3) * 110) + 'px');
+            $('page-title').textContent = 'Study Progression Planner (' + plural(n, 'Subject') + ' / Day)';
+        }
+        function renderHeader() {
+            const head = $('planner-head');
+            head.replaceChildren();
+            head.appendChild(el('div', '', 'Date'));
+            const p = cur();
+            for (let i = 0; i < p.count; i++) {
+                const h = el('div', 'hcell');
+                h.dataset.i = String(i);
+                const dot = el('span', 'hdot');
+                dot.style.background = p.subjects[i].color;
+                h.append(dot, el('span', 'hname', subjName(i)));
+                head.appendChild(h);
+            }
+            head.appendChild(el('div', 'col-actions'));
+        }
+        function syncDate(rowEl, r) {
+            const disp = rowEl.querySelector('.date-display');
+            disp.textContent = formatDateDisplay(r.date);
+            disp.classList.toggle('sunday', weekdayOf(r.date) === 0);
+        }
+        function syncCell(rowEl, r, i) {
+            const c = r.cells[i];
+            const slot = rowEl.querySelector('.slot[data-i="' + i + '"]');
+            const input = rowEl.querySelector('.chapter-input[data-i="' + i + '"]');
+            slot.classList.toggle('on', c.on);
+            slot.setAttribute('aria-checked', String(c.on));
+            input.disabled = !c.on;
+            input.style.opacity = c.on ? '1' : '0.5';
+            input.classList.toggle('on', c.on);
+            input.placeholder = c.on ? 'Enter chapter...' : 'Skipped';
+            // Text of a switched-off slot is kept in memory (so an accidental click can't wipe it) but not shown.
+            input.value = c.on ? c.v : '';
+            slot.title = (c.on ? 'Click to skip ' : 'Click to plan ') + subjName(i) + ' · drag to move';
+            const cellEl = rowEl.querySelector('.cell[data-i="' + i + '"]');
+            if (cellEl) cellEl.classList.toggle('off', !c.on);
+        }
+        function buildRow(r) {
+            const p = cur();
+            const row = el('div', 'planner-row');
+
+            const dateCol = el('div', 'col col-date');
+            const grip = el('span', 'row-grip', '⠿');
+            grip.title = "Drag to move this whole day's plan (dates stay in place)";
+            const dc = el('div', 'date-container');
+            const disp = el('div', 'date-display');
+            const dInput = document.createElement('input');
+            dInput.type = 'date';
+            dInput.value = r.date;
+            dInput.setAttribute('aria-label', 'Date');
+            dc.append(disp, dInput);
+            dateCol.append(grip, dc);
+            row.appendChild(dateCol);
+
+            for (let i = 0; i < p.count; i++) {
+                const cell = el('div', 'col cell');
+                cell.dataset.i = String(i);
+                styleCell(cell, p.subjects[i]);
+                const grp = el('div', 'subject-group');
+                const slot = el('div', 'slot');
+                slot.dataset.i = String(i);
+                slot.tabIndex = 0;
+                slot.setAttribute('role', 'checkbox');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'chapter-input';
+                input.dataset.i = String(i);
+                input.maxLength = 200;
+                input.autocomplete = 'off';
+                input.setAttribute('aria-label', subjName(i) + ' chapter');
+                const main = el('div', 'cell-main');
+                main.append(el('span', 'cell-label', subjName(i)), input);
+                grp.append(slot, main);
+                cell.appendChild(grp);
+                row.appendChild(cell);
+            }
+
+            const actions = el('div', 'col col-actions');
+            const skip = el('button', 'btn-skip', '💤');
+            skip.type = 'button';
+            skip.title = 'Rest day: skip this day and push the plan forward';
+            skip.setAttribute('aria-label', 'Skip this day and push the plan forward');
+            const del = el('button', 'btn-delete', '✖');
+            del.type = 'button';
+            del.title = 'Delete day';
+            del.setAttribute('aria-label', 'Delete day');
+            actions.append(skip, del);
+            row.appendChild(actions);
+
+            syncDate(row, r);
+            for (let i = 0; i < p.count; i++) syncCell(row, r, i);
+            return row;
+        }
+        /* One-shot visual effects for the next render: rows that are new, rows that changed, or a whole-table swap. */
+        const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        let fxEnter = new WeakSet();
+        let fxFlash = new WeakSet();
+        let nextAnim = null;
+        let swapTimer = null;
+        let newTabId = null;
+        const animateNext = (kind) => { nextAnim = kind; };
+        function render() {
+            const frag = document.createDocumentFragment();
+            cur().rows.forEach((r, i) => {
+                const row = buildRow(r);
+                if (nextAnim === 'swap') row.style.setProperty('--i', String(Math.min(i, 12)));
+                if (fxEnter.has(r)) row.classList.add('row-in');
+                if (fxFlash.has(r)) row.classList.add('row-flash');
+                frag.appendChild(row);
+            });
+            container.replaceChildren(frag);
+            fxEnter = new WeakSet();
+            fxFlash = new WeakSet();
+            if (nextAnim === 'swap') {
+                container.classList.add('swap');
+                clearTimeout(swapTimer);
+                swapTimer = setTimeout(() => container.classList.remove('swap'), 900);
+            }
+            nextAnim = null;
+        }
+        function renderAll(opts) {
+            updateLayoutVars();
+            if (opts && opts.keepBar) updateTabsActive(); else renderProfileBar();
+            renderHeader();
+            render();
+            renderSubjectSettings();
+            updateUndoBtn();
+            updateLayoutMode();
+        }
+        const rowIndex = (rowEl) => Array.prototype.indexOf.call(container.children, rowEl);
+
+        /* ------------------------------------------------------------------ *
+         * Profiles
+         * ------------------------------------------------------------------ */
+        let renamingId = null;
+
+        function renderProfileBar() {
+            const bar = $('profile-bar');
+            bar.replaceChildren();
+            ws.profiles.forEach((p) => {
+                const active = p.id === ws.activeId;
+                const tab = el('div', 'ptab' + (active ? ' active' : '') + (p.id === newTabId ? ' tab-in' : ''));
+                tab.dataset.id = p.id;
+                tab.setAttribute('role', 'tab');
+                tab.setAttribute('aria-selected', String(active));
+                if (renamingId === p.id) {
+                    const inp = document.createElement('input');
+                    inp.type = 'text';
+                    inp.className = 'ptab-input';
+                    inp.maxLength = 40;
+                    inp.value = p.name;
+                    inp.setAttribute('aria-label', 'Profile name');
+                    tab.appendChild(inp);
+                } else {
+                    const main = el('button', 'ptab-main', p.name);
+                    main.type = 'button';
+                    main.title = 'Double-click to rename';
+                    tab.appendChild(main);
+                    const edit = el('button', 'ptab-edit', '✎');   // only visible on the active tab (CSS), so switching can animate
+                    edit.type = 'button';
+                    edit.title = 'Rename profile';
+                    edit.setAttribute('aria-label', 'Rename profile');
+                    edit.tabIndex = active ? 0 : -1;
+                    tab.appendChild(edit);
+                }
+                bar.appendChild(tab);
+            });
+            const add = el('button', 'ptab-add', '+ New profile');
+            add.type = 'button';
+            bar.appendChild(add);
+            if (renamingId) {
+                const inp = bar.querySelector('.ptab-input');
+                if (inp) { inp.focus(); inp.select(); }
+            }
+        }
+        // Switching tabs only toggles classes, so the pill colours and the ✎ button glide instead of snapping.
+        function updateTabsActive() {
+            document.querySelectorAll('#profile-bar .ptab').forEach((tab) => {
+                const active = tab.dataset.id === ws.activeId;
+                tab.classList.toggle('active', active);
+                tab.setAttribute('aria-selected', String(active));
+                const edit = tab.querySelector('.ptab-edit');
+                if (edit) edit.tabIndex = active ? 0 : -1;
+            });
+            const t = document.querySelector('#profile-bar .ptab.active');
+            if (t && t.scrollIntoView) t.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', inline: 'nearest', block: 'nearest' });
+        }
+        function startRename(id) {
+            renamingId = id || ws.activeId;
+            renderProfileBar();
+            const t = $('profile-bar').querySelector('.ptab-input');
+            if (t) t.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
+        }
+        function commitRename(input) {
+            if (renamingId === null) return;
+            const id = renamingId;
+            renamingId = null;
+            const p = ws.profiles.find((x) => x.id === id);
+            const v = input.value.trim().slice(0, 40);
+            if (p && v && v !== p.name) { pushUndo('Rename profile'); p.name = v; scheduleSave(); }
+            renderProfileBar();
+        }
+        function switchProfile(id) {
+            if (id === ws.activeId || !ws.profiles.some((p) => p.id === id)) return;
+            ws.activeId = id;
+            animateNext('swap');
+            renderAll({ keepBar: true });
+            scheduleSave();
+        }
+        function addProfile() {
+            if (ws.profiles.length >= MAX_PROFILES) { showToast('Profile limit reached (' + MAX_PROFILES + ')'); return; }
+            pushUndo('New profile');
+            const p = makeProfile('Profile ' + (ws.profiles.length + 1));
+            ws.profiles.push(p);
+            ws.activeId = p.id;
+            newTabId = p.id;
+            setTimeout(() => { if (newTabId === p.id) newTabId = null; }, 450);
+            animateNext('swap');
+            renderAll();
+            scheduleSave();
+            startRename(p.id);
+        }
+        function duplicateProfile() {
+            if (ws.profiles.length >= MAX_PROFILES) { showToast('Profile limit reached (' + MAX_PROFILES + ')'); return; }
+            pushUndo('Duplicate profile');
+            const c = clone(cur());
+            c.id = uid();
+            c.name = (c.name + ' (copy)').slice(0, 40);
+            ws.profiles.splice(ws.profiles.findIndex((p) => p.id === ws.activeId) + 1, 0, c);
+            ws.activeId = c.id;
+            newTabId = c.id;
+            setTimeout(() => { if (newTabId === c.id) newTabId = null; }, 450);
+            animateNext('swap');
+            renderAll();
+            scheduleSave();
+            showToast('Profile duplicated', { label: 'Undo', fn: undo });
+        }
+        function deleteProfile() {
+            if (ws.profiles.length < 2) { showToast('You need at least one profile'); return; }
+            const p = cur();
+            if (!confirm('Delete the profile "' + p.name + '" and all its days?\n\nIt stays available under Backups, and you can undo right after.')) return;
+            snapshotProfile(p, 'Before deleting profile');
+            pushUndo('Delete profile');
+            const i = ws.profiles.findIndex((x) => x.id === p.id);
+            ws.profiles.splice(i, 1);
+            ws.activeId = ws.profiles[Math.min(i, ws.profiles.length - 1)].id;
+            animateNext('swap');
+            renderAll();
+            scheduleSave();
+            showToast('Deleted "' + p.name + '"', { label: 'Undo', fn: undo });
+        }
+
+        const bar = $('profile-bar');
+        bar.addEventListener('click', (e) => {
+            const t = e.target;
+            if (t.closest('.ptab-add')) { addProfile(); return; }
+            const tab = t.closest('.ptab');
+            if (!tab) return;
+            if (t.closest('.ptab-edit')) { startRename(tab.dataset.id); return; }
+            if (t.closest('.ptab-main')) switchProfile(tab.dataset.id);
+        });
+        bar.addEventListener('dblclick', (e) => {
+            const tab = e.target.closest('.ptab');
+            if (tab && e.target.closest('.ptab-main')) { switchProfile(tab.dataset.id); startRename(tab.dataset.id); }
+        });
+        bar.addEventListener('keydown', (e) => {
+            if (!e.target.classList.contains('ptab-input')) return;
+            if (e.key === 'Enter') { e.preventDefault(); commitRename(e.target); }
+            else if (e.key === 'Escape') { e.preventDefault(); renamingId = null; renderProfileBar(); }
+        });
+        bar.addEventListener('focusout', (e) => { if (e.target.classList.contains('ptab-input')) commitRename(e.target); });
+
+        $('btn-rename').addEventListener('click', () => { startRename(ws.activeId); });
+        $('btn-dup').addEventListener('click', duplicateProfile);
+        $('btn-del').addEventListener('click', deleteProfile);
+
+        /* Subjects */
+        function renderSubjectSettings() {
+            const p = cur();
+            document.querySelectorAll('#count-chips .chip').forEach((c) => {
+                const on = Number(c.dataset.n) === p.count;
+                c.classList.toggle('on', on);
+                c.setAttribute('aria-pressed', String(on));
+            });
+            const list = $('subject-list');
+            list.replaceChildren();
+            for (let i = 0; i < p.count; i++) {
+                const row = el('div', 'subj-row');
+                row.style.setProperty('--i', String(i));
+                const col = document.createElement('input');
+                col.type = 'color';
+                col.value = p.subjects[i].color;
+                col.dataset.i = String(i);
+                col.setAttribute('aria-label', 'Colour for subject ' + (i + 1));
+                const name = document.createElement('input');
+                name.type = 'text';
+                name.maxLength = 24;
+                name.value = p.subjects[i].name;
+                name.placeholder = 'Subject ' + (i + 1);
+                name.dataset.i = String(i);
+                name.setAttribute('aria-label', 'Name of subject ' + (i + 1));
+                row.append(col, name);
+                list.appendChild(row);
+            }
+        }
+        function setCount(n) {
+            const p = cur();
+            if (n === p.count || !(n >= 1 && n <= MAX_SUBJ)) return;
+            animateNext('swap');
+            commitOp('Change number of subjects', () => { p.count = n; }, 'Now ' + plural(n, 'subject') + ' in this profile', true);
+        }
+        $('count-chips').addEventListener('click', (e) => {
+            const chip = e.target.closest('.chip');
+            if (chip) setCount(Number(chip.dataset.n));
+        });
+        $('subject-list').addEventListener('input', (e) => {
+            const t = e.target;
+            const i = Number(t.dataset.i);
+            const p = cur();
+            if (!p.subjects[i]) return;
+            if (t.type === 'color') {
+                noteTyping('Change colour');
+                p.subjects[i].color = t.value;
+                container.querySelectorAll('.cell[data-i="' + i + '"]').forEach((c) => styleCell(c, p.subjects[i]));
+                const dot = $('planner-head').querySelector('.hcell[data-i="' + i + '"] .hdot');
+                if (dot) dot.style.background = t.value;
+            } else {
+                noteTyping('Rename subject');
+                p.subjects[i].name = t.value.slice(0, 24);
+                const nm = $('planner-head').querySelector('.hcell[data-i="' + i + '"] .hname');
+                if (nm) nm.textContent = subjName(i);
+                container.querySelectorAll('.chapter-input[data-i="' + i + '"]').forEach((inp) => inp.setAttribute('aria-label', subjName(i) + ' chapter'));
+                container.querySelectorAll('.cell[data-i="' + i + '"] .cell-label').forEach((lb) => { lb.textContent = subjName(i); });
+            }
+            scheduleSave();
         });
 
-        function showStatus(text, isSaving = false) {
-            statusText.textContent = text;
-            if (isSaving) {
-                statusDot.classList.add('saving');
-            } else {
-                statusDot.classList.remove('saving');
-            }
-        }
+        /* ------------------------------------------------------------------ *
+         * Row interactions (delegated)
+         * ------------------------------------------------------------------ */
+        let suppressClick = false;
 
-        function triggerAutoSave() {
-            showStatus('Saving...', true);
-            if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                saveData();
-            }, 300);
-        }
-
-        function formatDateDisplay(isoDateStr) {
-            if (!isoDateStr) return "Select Date";
-            const [year, month, day] = isoDateStr.split('-');
-            const dateObj = new Date(year, month - 1, day);
-            const formatted = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-            return `${formatted} (${dayName})`;
-        }
-
-        function handleDateChange(inputElem) {
-            const display = inputElem.previousElementSibling;
-            display.textContent = formatDateDisplay(inputElem.value);
-            const row = inputElem.closest('.planner-row');
-            const d = new Date(inputElem.value);
-            if (d.getDay() === 0) {
-                row.classList.add('is-sunday');
-            } else {
-                row.classList.remove('is-sunday');
-            }
-            triggerAutoSave();
-        }
-
-        function triggerDatePicker(displayElem) {
-            const input = displayElem.nextElementSibling;
-            if (input && typeof input.showPicker === 'function') {
-                input.showPicker();
-            }
-        }
-
-        function getRowData() {
-            const rows = document.querySelectorAll('.planner-row');
-            const data = [];
-            rows.forEach((row, idx) => {
-                const dateVal = row.querySelector('input[type="date"]').value;
-                const slotM = row.querySelector('.slot-m');
-                const slotP = row.querySelector('.slot-p');
-                const slotC = row.querySelector('.slot-c');
-                data.push({
-                    id: row.dataset.id || `row_${idx}_${Date.now()}`,
-                    date: dateVal,
-                    m: slotM && !slotM.querySelector('.slot-btn').classList.contains('is-disabled'),
-                    mVal: slotM ? slotM.querySelector('.chapter-input').value : '',
-                    p: slotP && !slotP.querySelector('.slot-btn').classList.contains('is-disabled'),
-                    pVal: slotP ? slotP.querySelector('.chapter-input').value : '',
-                    c: slotC && !slotC.querySelector('.slot-btn').classList.contains('is-disabled'),
-                    cVal: slotC ? slotC.querySelector('.chapter-input').value : ''
-                });
-            });
-            return data;
-        }
-
-        function saveData() {
-            const data = getRowData();
-            const state = {
-                title: plannerTitle.innerText.trim() || '3-Subject Study Planner',
-                rows: data,
-                updatedAt: new Date().toISOString()
-            };
-
-            // 1. Save to LocalStorage
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            } catch (e) {
-                console.warn('LocalStorage save failed', e);
-            }
-
-            // 2. Save to IndexedDB
-            if (db) {
-                try {
-                    const tx = db.transaction(STORE_NAME, 'readwrite');
-                    const store = tx.objectStore(STORE_NAME);
-                    store.put({ id: 'current', state });
-                } catch (err) {
-                    console.warn('IndexedDB write error', err);
-                }
-            }
-
-            showStatus('Saved');
-        }
-
-        async function loadData() {
-            let loadedState = null;
-
-            // 1. Try IndexedDB
-            if (db) {
-                try {
-                    loadedState = await new Promise((resolve) => {
-                        const tx = db.transaction(STORE_NAME, 'readonly');
-                        const store = tx.objectStore(STORE_NAME);
-                        const req = store.get('current');
-                        req.onsuccess = () => resolve(req.result ? req.result.state : null);
-                        req.onerror = () => resolve(null);
-                    });
-                } catch (e) {}
-            }
-
-            // 2. Try LocalStorage
-            if (!loadedState) {
-                try {
-                    const local = localStorage.getItem(STORAGE_KEY);
-                    if (local) {
-                        const parsed = JSON.parse(local);
-                        loadedState = Array.isArray(parsed) ? { title: '3-Subject Study Planner', rows: parsed } : parsed;
-                    }
-                } catch (e) {}
-            }
-
-            container.innerHTML = '';
-
-            if (loadedState && loadedState.rows && loadedState.rows.length > 0) {
-                if (loadedState.title) plannerTitle.innerText = loadedState.title;
-                loadedState.rows.forEach(r => addRow(false, r));
-                updateStepButtonsState();
+        container.addEventListener('input', (e) => {
+            const t = e.target;
+            if (!t.classList || !t.classList.contains('chapter-input')) return;
+            const idx = rowIndex(t.closest('.planner-row'));
+            const r = cur().rows[idx];
+            if (!r) return;
+            noteTyping('Edit text');
+            r.cells[Number(t.dataset.i)].v = t.value;
+            scheduleSave();
+        });
+        container.addEventListener('change', (e) => {
+            const t = e.target;
+            if (t.type !== 'date') return;
+            const rowEl = t.closest('.planner-row');
+            const r = cur().rows[rowIndex(rowEl)];
+            if (!r) return;
+            pushUndo('Change date');
+            r.date = parseISO(t.value) !== null ? t.value : '';
+            syncDate(rowEl, r);
+            const dd = rowEl.querySelector('.date-display');
+            dd.classList.remove('flash');
+            void dd.offsetWidth;
+            dd.classList.add('flash');
+            scheduleSave();
+        });
+        container.addEventListener('click', (e) => {
+            const t = e.target;
+            if (t.type === 'date') { try { t.showPicker(); } catch (err) { /* unsupported or already open */ } return; }
+            const slot = t.closest('.slot');
+            if (slot) {
+                if (suppressClick) return;
+                toggleSlot(slot);
                 return;
             }
-
-            // Default seed rows
-            for (let i = 0; i < 5; i++) {
-                addRow(false);
-            }
-            updateStepButtonsState();
-            saveData();
-        }
-
-        function getNextDate() {
-            const rows = document.querySelectorAll('.planner-row');
-            if (rows.length === 0) return new Date().toISOString().split('T')[0];
-            const lastDateVal = rows[rows.length - 1].querySelector('input[type="date"]').value;
-            if (!lastDateVal) return new Date().toISOString().split('T')[0];
-            const [y, m, d] = lastDateVal.split('-').map(Number);
-            const dateObj = new Date(y, m - 1, d);
-            dateObj.setDate(dateObj.getDate() + 1);
-            const ny = dateObj.getFullYear();
-            const nm = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const nd = String(dateObj.getDate()).padStart(2, '0');
-            return `${ny}-${nm}-${nd}`;
-        }
-
-        function addRow(saveAfter = true, loadData = null) {
-            const row = document.createElement('div');
-            row.className = 'planner-row';
-            row.dataset.id = loadData ? loadData.id : `row_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-
-            let dateVal = loadData ? loadData.date : getNextDate();
-            let displayStr = formatDateDisplay(dateVal);
-
-            const [year, month, day] = dateVal.split('-').map(Number);
-            const isSun = new Date(year, month - 1, day).getDay() === 0;
-            if (isSun) row.classList.add('is-sunday');
-
-            let mActive = loadData ? loadData.m : true;
-            let pActive = loadData ? loadData.p : true;
-            let cActive = loadData ? loadData.c : true;
-
-            let mVal = loadData ? loadData.mVal : "";
-            let pVal = loadData ? loadData.pVal : "";
-            let cVal = loadData ? loadData.cVal : "";
-
-            row.innerHTML = `
-                <div class="col">
-                    <div class="date-container">
-                        <div class="date-display" onclick="triggerDatePicker(this)">${displayStr}</div>
-                        <input type="date" value="${dateVal}" onchange="handleDateChange(this)">
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="subject-slot slot-m" draggable="true" data-type="m">
-                        <span class="drag-grip" title="Drag to shift slot">
-                            <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">
-                                <circle cx="2" cy="2" r="1.2"/>
-                                <circle cx="6" cy="2" r="1.2"/>
-                                <circle cx="2" cy="6" r="1.2"/>
-                                <circle cx="6" cy="6" r="1.2"/>
-                                <circle cx="2" cy="10" r="1.2"/>
-                                <circle cx="6" cy="10" r="1.2"/>
-                            </svg>
-                        </span>
-                        <div class="step-btns">
-                            <button type="button" class="step-btn step-up" onclick="stepShift(this, 'm', -1)" title="Move up">▲</button>
-                            <button type="button" class="step-btn step-down" onclick="stepShift(this, 'm', 1)" title="Move down">▼</button>
-                        </div>
-                        <button type="button" class="slot-btn bg-m ${mActive ? '' : 'is-disabled'}" onclick="toggleSlot(this, 'm')">M</button>
-                        <input type="text" class="chapter-input" value="${mVal}" placeholder="${mActive ? 'Maths chapter...' : 'Skipped'}" ${mActive ? '' : 'disabled'}>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="subject-slot slot-p" draggable="true" data-type="p">
-                        <span class="drag-grip" title="Drag to shift slot">
-                            <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">
-                                <circle cx="2" cy="2" r="1.2"/>
-                                <circle cx="6" cy="2" r="1.2"/>
-                                <circle cx="2" cy="6" r="1.2"/>
-                                <circle cx="6" cy="6" r="1.2"/>
-                                <circle cx="2" cy="10" r="1.2"/>
-                                <circle cx="6" cy="10" r="1.2"/>
-                            </svg>
-                        </span>
-                        <div class="step-btns">
-                            <button type="button" class="step-btn step-up" onclick="stepShift(this, 'p', -1)" title="Move up">▲</button>
-                            <button type="button" class="step-btn step-down" onclick="stepShift(this, 'p', 1)" title="Move down">▼</button>
-                        </div>
-                        <button type="button" class="slot-btn bg-p ${pActive ? '' : 'is-disabled'}" onclick="toggleSlot(this, 'p')">P</button>
-                        <input type="text" class="chapter-input" value="${pVal}" placeholder="${pActive ? 'Physics chapter...' : 'Skipped'}" ${pActive ? '' : 'disabled'}>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="subject-slot slot-c" draggable="true" data-type="c">
-                        <span class="drag-grip" title="Drag to shift slot">
-                            <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">
-                                <circle cx="2" cy="2" r="1.2"/>
-                                <circle cx="6" cy="2" r="1.2"/>
-                                <circle cx="2" cy="6" r="1.2"/>
-                                <circle cx="6" cy="6" r="1.2"/>
-                                <circle cx="2" cy="10" r="1.2"/>
-                                <circle cx="6" cy="10" r="1.2"/>
-                            </svg>
-                        </span>
-                        <div class="step-btns">
-                            <button type="button" class="step-btn step-up" onclick="stepShift(this, 'c', -1)" title="Move up">▲</button>
-                            <button type="button" class="step-btn step-down" onclick="stepShift(this, 'c', 1)" title="Move down">▼</button>
-                        </div>
-                        <button type="button" class="slot-btn bg-c ${cActive ? '' : 'is-disabled'}" onclick="toggleSlot(this, 'c')">C</button>
-                        <input type="text" class="chapter-input" value="${cVal}" placeholder="${cActive ? 'Chemistry chapter...' : 'Skipped'}" ${cActive ? '' : 'disabled'}>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <button class="btn-delete" onclick="deleteRow(this)" title="Delete Day">✖</button>
-                </div>
-            `;
-
-            container.appendChild(row);
-            attachSlotDragEvents(row);
-            updateStepButtonsState();
-
-            if (saveAfter) triggerAutoSave();
-        }
-
-        function deleteRow(btn) {
-            btn.closest('.planner-row').remove();
-            updateStepButtonsState();
-            triggerAutoSave();
-            showToast('Day removed');
-        }
-
-        function toggleSlot(btn, subType) {
-            btn.classList.toggle('is-disabled');
-            const slot = btn.closest('.subject-slot');
-            const input = slot.querySelector('.chapter-input');
-            const isActive = !btn.classList.contains('is-disabled');
-
-            if (isActive) {
-                input.disabled = false;
-                input.placeholder = `${subType === 'm' ? 'Maths' : subType === 'p' ? 'Physics' : 'Chemistry'} chapter...`;
-                input.focus();
-            } else {
-                input.disabled = true;
-                input.placeholder = 'Skipped';
-            }
-            triggerAutoSave();
-        }
-
-        function updateStepButtonsState() {
-            const rows = document.querySelectorAll('.planner-row');
-            rows.forEach((row, idx) => {
-                const ups = row.querySelectorAll('.step-up');
-                const downs = row.querySelectorAll('.step-down');
-                ups.forEach(u => u.disabled = (idx === 0));
-                downs.forEach(d => d.disabled = (idx === rows.length - 1));
-            });
-        }
-
-        // ==========================================
-        // ROCK-SOLID SLOT SHIFT (MOVE EVERYTHING)
-        // Move 1 step down -> lower one takes its place
-        // Move 3 steps down -> 3 previously below move 1 step up
-        // ZERO JUMPING: NO LIVE CSS TRANSLATEY, NO REFTERRORS
-        // ==========================================
-        let dragSource = null;
-
-        function getSlotLocation(slotElem) {
-            if (!slotElem) return null;
-            const row = slotElem.closest('.planner-row');
-            if (!row) return null;
-            const allRows = Array.from(document.querySelectorAll('.planner-row'));
-            const rowIndex = allRows.indexOf(row);
-            const colType = slotElem.dataset.type;
-            return { rowIndex, colType, row, slotElem };
-        }
-
-        function attachSlotDragEvents(row) {
-            const slots = row.querySelectorAll('.subject-slot');
-            slots.forEach(slot => {
-                slot.addEventListener('dragstart', handleDragStart);
-                slot.addEventListener('dragend', handleDragEnd);
-                slot.addEventListener('dragover', handleDragOver);
-                slot.addEventListener('dragleave', handleDragLeave);
-                slot.addEventListener('drop', handleDrop);
-                attachTouchDragEvents(slot);
-            });
-        }
-
-        function handleDragStart(e) {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') {
+            const rowEl = t.closest('.planner-row');
+            if (!rowEl) return;
+            if (t.closest('.btn-delete')) deleteRow(rowIndex(rowEl));
+            else if (t.closest('.btn-skip')) skipDay(rowIndex(rowEl));
+        });
+        container.addEventListener('keydown', (e) => {
+            const slot = e.target.closest && e.target.closest('.slot');
+            if (!slot) return;
+            const idx = rowIndex(slot.closest('.planner-row'));
+            const i = Number(slot.dataset.i);
+            if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleSlot(slot); }
+            else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
                 e.preventDefault();
-                return;
+                const to = idx + (e.key === 'ArrowUp' ? -1 : 1);
+                if (to < 0 || to >= cur().rows.length) return;
+                pushUndo('Move slot');
+                moveCells([i], idx, to);
+                render();
+                scheduleSave();
+                const moved = container.children[to].querySelector('.slot[data-i="' + i + '"]');
+                if (moved) moved.focus();
             }
-            dragSource = getSlotLocation(this);
-            this.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', '');
+        });
+
+        function toggleSlot(slot) {
+            const rowEl = slot.closest('.planner-row');
+            const r = cur().rows[rowIndex(rowEl)];
+            const i = Number(slot.dataset.i);
+            if (!r) return;
+            pushUndo('Toggle slot');
+            r.cells[i].on = !r.cells[i].on;
+            syncCell(rowEl, r, i);
+            slot.classList.remove('pop');
+            if (r.cells[i].on) {
+                void slot.offsetWidth;
+                slot.classList.add('pop');
+                setTimeout(() => slot.classList.remove('pop'), 340);
+            }
+            scheduleSave();
+        }
+        let deleting = false;
+        function deleteRow(idx) {
+            const rowObj = cur().rows[idx];
+            if (!rowObj || deleting) return;
+            const rowEl = container.children[idx];
+            const finish = () => {
+                deleting = false;
+                const i = cur().rows.indexOf(rowObj);
+                if (i < 0) return;
+                if (!isRest(rowObj)) snapshotProfile(cur(), 'Before deleting a day', 2 * 60 * 1000);
+                pushUndo('Delete day');
+                cur().rows.splice(i, 1);
+                render();
+                scheduleSave();
+                showToast('Day deleted', { label: 'Undo', fn: undo });
+            };
+            if (!rowEl || !rowEl.animate || reduceMotion()) { finish(); return; }
+            deleting = true;
+            const cs = getComputedStyle(rowEl);
+            const from = { height: rowEl.offsetHeight + 'px', opacity: 1, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom };
+            const to = { height: '0px', opacity: 0, paddingTop: '0px', paddingBottom: '0px' };
+            rowEl.style.overflow = 'hidden';
+            rowEl.style.pointerEvents = 'none';
+            const anim = rowEl.animate([from, to], { duration: 240, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
+            anim.onfinish = finish;
+            anim.oncancel = () => { deleting = false; };
         }
 
-        function handleDragEnd() {
-            document.querySelectorAll('.subject-slot').forEach(s => {
-                s.classList.remove('dragging');
-                s.classList.remove('drag-over');
-            });
-            dragSource = null;
-        }
-
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            if (!dragSource) return;
-
-            // Simple, non-layout-shifting visual indicator
-            if (!this.classList.contains('drag-over')) {
-                this.classList.add('drag-over');
-            }
-        }
-
-        function handleDragLeave() {
-            this.classList.remove('drag-over');
-        }
-
-        function handleDrop(e) {
-            e.preventDefault();
-            this.classList.remove('drag-over');
-            if (!dragSource) return;
-
-            const source = dragSource;
-            // Clear dragging styles before calculating geometry so measurements are precise
-            if (source.slotElem) {
-                source.slotElem.classList.remove('dragging');
-            }
-            document.querySelectorAll('.subject-slot').forEach(s => {
-                s.classList.remove('drag-over', 'dragging');
-            });
-
-            const targetLoc = getSlotLocation(this);
-            if (targetLoc && (source.rowIndex !== targetLoc.rowIndex || source.colType !== targetLoc.colType)) {
-                executeSlotShift(source.colType, source.rowIndex, targetLoc.colType, targetLoc.rowIndex);
-            }
-            dragSource = null;
-        }
-
-        // 1-Click Step Shift (Up / Down)
-        function stepShift(btn, colType, delta) {
-            const row = btn.closest('.planner-row');
-            const allRows = Array.from(document.querySelectorAll('.planner-row'));
-            const currIdx = allRows.indexOf(row);
-            const targetIdx = currIdx + delta;
-            if (targetIdx >= 0 && targetIdx < allRows.length) {
-                executeSlotShift(colType, currIdx, colType, targetIdx);
-            }
-        }
-
-        // Active animation cleanup tracker for instant responsiveness on rapid clicks
-        let activeAnimationCleanup = null;
-
-        // ==========================================
-        // BUTTERY-SMOOTH FLIP ANIMATION FOR SLOTS
-        // 1. First: Record initial screen positions
-        // 2. Last: Reorder DOM elements
-        // 3. Invert: Translate to previous positions
-        // 4. Play: Smooth hardware-accelerated 60fps glide
-        // ==========================================
-        function executeSlotShift(srcCol, srcRow, tgtCol, tgtRow) {
-            if (srcRow === tgtRow && srcCol === tgtCol) return;
-
-            // Finish any active animation immediately so rapid clicks never drop
-            if (activeAnimationCleanup) {
-                activeAnimationCleanup();
-                activeAnimationCleanup = null;
-            }
-
-            const allRows = Array.from(document.querySelectorAll('.planner-row'));
-            if (srcRow >= allRows.length || tgtRow >= allRows.length) return;
-
-            const colMap = { m: 1, p: 2, c: 3 };
-            const srcColIdx = colMap[srcCol];
-            const tgtColIdx = colMap[tgtCol];
-            if (!srcColIdx || !tgtColIdx) return;
-
-            if (srcCol === tgtCol) {
-                const colIndex = srcColIdx;
-                const colSlots = allRows.map(r => {
-                    const cols = r.querySelectorAll('.col');
-                    return cols[colIndex] ? cols[colIndex].querySelector('.subject-slot') : null;
-                }).filter(Boolean);
-
-                if (srcRow >= colSlots.length || tgtRow >= colSlots.length) return;
-
-                // 1. FIRST: Record starting screen positions
-                const firstRects = new Map();
-                colSlots.forEach(slot => {
-                    firstRects.set(slot, slot.getBoundingClientRect());
-                });
-
-                // 2. DOM REORDER: Move elements in array
-                // If moving 3 steps down: index srcRow is removed, intermediate items shift up by 1, inserted at tgtRow
-                const [movedSlot] = colSlots.splice(srcRow, 1);
-                colSlots.splice(tgtRow, 0, movedSlot);
-
-                // Place each slot in its new row container
-                allRows.forEach((row, i) => {
-                    const colContainer = row.querySelectorAll('.col')[colIndex];
-                    if (colContainer && colSlots[i]) {
-                        colContainer.replaceChildren(colSlots[i]);
-                    }
-                });
-
-                // 3. INVERT: Measure new positions and invert
-                const animatedSlots = [];
-                colSlots.forEach(slot => {
-                    const firstRect = firstRects.get(slot);
-                    const lastRect = slot.getBoundingClientRect();
-                    const dy = firstRect.top - lastRect.top;
-                    const dx = firstRect.left - lastRect.left;
-
-                    if (Math.abs(dy) > 0.5 || Math.abs(dx) > 0.5) {
-                        slot.style.transition = 'none';
-                        slot.style.transform = `translate(${dx}px, ${dy}px)`;
-                        slot.classList.add('slot-animating');
-                        if (slot === movedSlot) {
-                            slot.classList.add('slot-moved');
-                        } else {
-                            slot.classList.add('slot-shifted');
-                        }
-                        animatedSlots.push(slot);
-                    }
-                });
-
-                // Force layout reflow so inverted transforms are committed
-                if (animatedSlots.length > 0) {
-                    void animatedSlots[0].offsetHeight;
-                }
-
-                // 4. PLAY: Smoothly glide all elements to natural position
-                requestAnimationFrame(() => {
-                    animatedSlots.forEach(slot => {
-                        slot.style.transition = 'transform 320ms cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 320ms ease, background-color 320ms ease';
-                        slot.style.transform = 'translate(0px, 0px)';
-                    });
-                });
-
-                // Cleanup and persist
-                const cleanup = () => {
-                    animatedSlots.forEach(slot => {
-                        slot.style.transition = '';
-                        slot.style.transform = '';
-                        slot.classList.remove('slot-animating', 'slot-moved', 'slot-shifted');
-                    });
-                    updateStepButtonsState();
-                    triggerAutoSave();
-                };
-
-                activeAnimationCleanup = cleanup;
-                setTimeout(() => {
-                    if (activeAnimationCleanup === cleanup) {
-                        cleanup();
-                        activeAnimationCleanup = null;
-                    }
-                }, 340);
-
-            } else {
-                // Cross-column transfer with smooth FLIP
-                const srcContainer = allRows[srcRow].querySelectorAll('.col')[srcColIdx];
-                const tgtContainer = allRows[tgtRow].querySelectorAll('.col')[tgtColIdx];
-                const srcSlot = srcContainer ? srcContainer.querySelector('.subject-slot') : null;
-                const tgtSlot = tgtContainer ? tgtContainer.querySelector('.subject-slot') : null;
-
-                if (!srcSlot || !tgtSlot) return;
-
-                const srcRect = srcSlot.getBoundingClientRect();
-                const tgtRect = tgtSlot.getBoundingClientRect();
-
-                const srcInput = srcSlot.querySelector('.chapter-input');
-                const tgtInput = tgtSlot.querySelector('.chapter-input');
-                const srcBtn = srcSlot.querySelector('.slot-btn');
-                const tgtBtn = tgtSlot.querySelector('.slot-btn');
-
-                const tempVal = srcInput.value;
-                const tempActive = !srcBtn.classList.contains('is-disabled');
-
-                srcInput.value = tgtInput.value;
-                if (!tgtBtn.classList.contains('is-disabled')) {
-                    srcBtn.classList.remove('is-disabled');
-                    srcInput.disabled = false;
-                } else {
-                    srcBtn.classList.add('is-disabled');
-                    srcInput.disabled = true;
-                }
-
-                tgtInput.value = tempVal;
-                if (tempActive) {
-                    tgtBtn.classList.remove('is-disabled');
-                    tgtInput.disabled = false;
-                } else {
-                    tgtBtn.classList.add('is-disabled');
-                    tgtInput.disabled = true;
-                }
-
-                const dxSrc = tgtRect.left - srcRect.left;
-                const dySrc = tgtRect.top - srcRect.top;
-
-                srcSlot.style.transition = 'none';
-                srcSlot.style.transform = `translate(${dxSrc}px, ${dySrc}px)`;
-                srcSlot.classList.add('slot-animating', 'slot-moved');
-
-                tgtSlot.style.transition = 'none';
-                tgtSlot.style.transform = `translate(${-dxSrc}px, ${-dySrc}px)`;
-                tgtSlot.classList.add('slot-animating', 'slot-moved');
-
-                void srcSlot.offsetHeight;
-
-                requestAnimationFrame(() => {
-                    srcSlot.style.transition = 'transform 320ms cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 320ms ease, background-color 320ms ease';
-                    srcSlot.style.transform = 'translate(0px, 0px)';
-                    tgtSlot.style.transition = 'transform 320ms cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 320ms ease, background-color 320ms ease';
-                    tgtSlot.style.transform = 'translate(0px, 0px)';
-                });
-
-                const cleanup = () => {
-                    srcSlot.style.transition = '';
-                    srcSlot.style.transform = '';
-                    srcSlot.classList.remove('slot-animating', 'slot-moved');
-                    tgtSlot.style.transition = '';
-                    tgtSlot.style.transform = '';
-                    tgtSlot.classList.remove('slot-animating', 'slot-moved');
-                    triggerAutoSave();
-                };
-
-                activeAnimationCleanup = cleanup;
-                setTimeout(() => {
-                    if (activeAnimationCleanup === cleanup) {
-                        cleanup();
-                        activeAnimationCleanup = null;
-                    }
-                }, 340);
-            }
-
-            showToast('Slot moved');
-        }
-
-        // Mobile touch drag
-        function attachTouchDragEvents(slot) {
-            const grip = slot.querySelector('.drag-grip');
-            if (!grip) return;
-
-            let touchOverSlot = null;
-
-            grip.addEventListener('touchstart', (e) => {
-                dragSource = getSlotLocation(slot);
-                slot.classList.add('dragging');
-            }, { passive: true });
-
-            grip.addEventListener('touchmove', (e) => {
-                if (!dragSource) return;
-                const touch = e.touches[0];
-                const elem = document.elementFromPoint(touch.clientX, touch.clientY);
-                const currentSlot = elem ? elem.closest('.subject-slot') : null;
-
-                if (touchOverSlot && touchOverSlot !== currentSlot) {
-                    touchOverSlot.classList.remove('drag-over');
-                }
-
-                if (currentSlot && currentSlot !== dragSource.slotElem) {
-                    touchOverSlot = currentSlot;
-                    touchOverSlot.classList.add('drag-over');
-                }
-            }, { passive: true });
-
-            grip.addEventListener('touchend', () => {
-                slot.classList.remove('dragging');
-                if (touchOverSlot) {
-                    touchOverSlot.classList.remove('drag-over');
-                    const targetLoc = getSlotLocation(touchOverSlot);
-                    if (dragSource && targetLoc && (dragSource.rowIndex !== targetLoc.rowIndex || dragSource.colType !== targetLoc.colType)) {
-                        executeSlotShift(dragSource.colType, dragSource.rowIndex, targetLoc.colType, targetLoc.rowIndex);
-                    }
-                    touchOverSlot = null;
-                }
-                dragSource = null;
+        /* ------------------------------------------------------------------ *
+         * Drag & drop of slots (and whole days) with smooth animation
+         *   Dates stay where they are; the chapter + on/off state move, and the
+         *   items in between slide over to make room.
+         * ------------------------------------------------------------------ */
+        function moveCells(idxs, from, to) {
+            const list = cur().rows;
+            idxs.forEach((i) => {
+                const items = list.map((r) => r.cells[i]);
+                const moved = items.splice(from, 1)[0];
+                items.splice(to, 0, moved);
+                list.forEach((r, j) => { r.cells[i] = items[j]; });
             });
         }
 
-        // ==========================================
-        // DATE SHIFTS & SCHEDULE OPERATIONS
-        // ==========================================
-        function shiftAllDates(deltaDays) {
-            const dateInputs = document.querySelectorAll('.planner-row input[type="date"]');
-            dateInputs.forEach(input => {
-                if (!input.value) return;
-                const [y, m, d] = input.value.split('-').map(Number);
-                const dateObj = new Date(y, m - 1, d);
-                dateObj.setDate(dateObj.getDate() + deltaDays);
-                const ny = dateObj.getFullYear();
-                const nm = String(dateObj.getMonth() + 1).padStart(2, '0');
-                const nd = String(dateObj.getDate()).padStart(2, '0');
-                input.value = `${ny}-${nm}-${nd}`;
-                handleDateChange(input);
-            });
-            triggerAutoSave();
-            showToast(`Dates shifted ${deltaDays > 0 ? '+1' : '-1'} day`);
+        let drag = null;
+
+        container.addEventListener('pointerdown', (e) => {
+            if (drag) return;
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            const h = e.target.closest('.slot, .row-grip');
+            if (!h) return;
+            const from = rowIndex(h.closest('.planner-row'));
+            if (from < 0) return;
+            const isGrip = h.classList.contains('row-grip');
+            drag = {
+                h, from, to: from,
+                keys: isGrip ? Array.from({ length: cur().count }, (_, i) => i) : [Number(h.dataset.i)],
+                sx: e.clientX, sy: e.clientY, cy: e.clientY,
+                id: e.pointerId, active: false, dropping: false, raf: 0
+            };
+            window.addEventListener('pointermove', onDragMove);
+            window.addEventListener('pointerup', onDragUp);
+            window.addEventListener('pointercancel', onDragCancel);
+            window.addEventListener('blur', onDragCancel);
+            window.addEventListener('keydown', onDragKey);
+        });
+
+        function dragListenersOff() {
+            window.removeEventListener('pointermove', onDragMove);
+            window.removeEventListener('pointerup', onDragUp);
+            window.removeEventListener('pointercancel', onDragCancel);
+            window.removeEventListener('blur', onDragCancel);
+            window.removeEventListener('keydown', onDragKey);
         }
+        function onDragMove(e) {
+            if (!drag || e.pointerId !== drag.id) return;
+            drag.cy = e.clientY;
+            if (!drag.active) {
+                if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
+                startDrag();
+            }
+            if (!drag.dropping) updateDrag();
+        }
+        function onDragUp(e) {
+            if (!drag || e.pointerId !== drag.id) return;
+            dragListenersOff();
+            if (!drag.active) { drag = null; return; }   // it was just a click
+            suppressClick = true;
+            setTimeout(() => { suppressClick = false; }, 80);
+            finishDrag(true);
+        }
+        function onDragCancel() {
+            if (!drag) return;
+            dragListenersOff();
+            if (drag.active && !drag.dropping) finishDrag(false);
+            else if (!drag.active) drag = null;
+        }
+        function onDragKey(e) { if (e.key === 'Escape') onDragCancel(); }
 
-        function skipSundays() {
-            const rows = document.querySelectorAll('.planner-row');
-            let prevDate = null;
+        function startDrag() {
+            const d = drag;
+            d.active = true;
+            document.body.classList.add('dragging');
+            container.classList.add('is-dragging');
 
-            rows.forEach(row => {
-                const input = row.querySelector('input[type="date"]');
-                let [y, m, d] = input.value.split('-').map(Number);
-                let dateObj = new Date(y, m - 1, d);
+            const rowEls = Array.from(container.children);
+            d.tops = rowEls.map((r) => r.getBoundingClientRect().top + window.scrollY);
+            d.heights = rowEls.map((r) => r.offsetHeight);
+            d.cells = rowEls.map((r) => d.keys.map((i) => r.querySelector('.cell[data-i="' + i + '"]')));
 
-                if (prevDate) {
-                    const minDate = new Date(prevDate);
-                    minDate.setDate(minDate.getDate() + 1);
-                    if (dateObj < minDate) {
-                        dateObj = minDate;
+            const srcCells = d.cells[d.from];
+            const rects = srcCells.map((c) => c.getBoundingClientRect());
+            const left = Math.min(...rects.map((r) => r.left));
+            const right = Math.max(...rects.map((r) => r.right));
+            const top = Math.min(...rects.map((r) => r.top));
+            const bottom = Math.max(...rects.map((r) => r.bottom));
+            d.height = bottom - top;
+            d.cellOffset = top + window.scrollY - d.tops[d.from];
+            d.offsetY = d.cy - top;
+
+            const fl = el('div', 'drag-float');
+            fl.style.left = left + 'px';
+            fl.style.top = top + 'px';
+            fl.style.width = (right - left) + 'px';
+            fl.style.height = d.height + 'px';
+            if ($('planner-card').classList.contains('stacked')) fl.classList.add('stacked');
+            srcCells.forEach((c, i) => {
+                const cp = c.cloneNode(true);
+                const origInputs = c.querySelectorAll('input');
+                cp.querySelectorAll('input').forEach((inp, j) => { inp.value = origInputs[j].value; });
+                cp.style.left = (rects[i].left - left) + 'px';
+                cp.style.top = (rects[i].top - top) + 'px';
+                cp.style.width = rects[i].width + 'px';
+                cp.style.height = rects[i].height + 'px';
+                fl.appendChild(cp);
+            });
+            document.body.appendChild(fl);
+            d.float = fl;
+
+            d.cells.forEach((rowCells) => rowCells.forEach((c) => c.classList.add('shiftable')));
+            srcCells.forEach((c) => c.classList.add('drag-origin'));
+            d.raf = requestAnimationFrame(autoScroll);
+        }
+        function updateDrag() {
+            const d = drag;
+            const top = d.cy - d.offsetY;
+            d.float.style.top = top + 'px';
+            const moved = top + window.scrollY - (d.tops[d.from] + d.cellOffset);   // how far the item has travelled
+            let best = d.from, bestDist = Infinity;
+            for (let i = 0; i < d.tops.length; i++) {
+                const dist = Math.abs(d.tops[i] - d.tops[d.from] - moved);
+                if (dist < bestDist) { bestDist = dist; best = i; }
+            }
+            if (best !== d.to) { d.to = best; applyShifts(); }
+        }
+        function applyShifts() {
+            const { from, to, cells, tops } = drag;
+            cells.forEach((rowCells, j) => {
+                let dy = 0;
+                if (j === from) dy = tops[to] - tops[from];                              // the ghost of the dragged item
+                else if (from < to && j > from && j <= to) dy = tops[j - 1] - tops[j];   // slide up
+                else if (from > to && j >= to && j < from) dy = tops[j + 1] - tops[j];   // slide down
+                rowCells.forEach((c) => { c.style.transform = dy ? 'translateY(' + dy + 'px)' : ''; });
+            });
+        }
+        function autoScroll() {
+            if (!drag || !drag.active || drag.dropping) return;
+            const edge = 70, y = drag.cy, vh = window.innerHeight;
+            let dy = 0;
+            if (y < edge) dy = -Math.ceil((edge - y) / 4);
+            else if (y > vh - edge) dy = Math.ceil((y - (vh - edge)) / 4);
+            if (dy) { window.scrollBy(0, dy); updateDrag(); }
+            drag.raf = requestAnimationFrame(autoScroll);
+        }
+        function finishDrag(commit) {
+            const d = drag;
+            d.dropping = true;
+            cancelAnimationFrame(d.raf);
+            const target = commit ? d.to : d.from;
+            const fl = d.float;
+            fl.style.transition = 'top 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.18s ease, box-shadow 0.18s ease';
+            fl.style.top = (d.tops[target] + d.cellOffset - window.scrollY) + 'px';
+            fl.style.transform = 'scale(1)';
+            fl.style.boxShadow = '0 2px 6px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(100, 116, 139, 0.18)';
+
+            setTimeout(() => {
+                const changed = commit && d.to !== d.from;
+                if (changed) {
+                    snapshotProfile(cur(), 'Before moving a slot', 2 * 60 * 1000);
+                    pushUndo(d.keys.length > 1 ? "Move day's plan" : 'Move slot');
+                    moveCells(d.keys, d.from, d.to);
+                }
+                d.cells.forEach((rowCells) => rowCells.forEach((c) => {
+                    c.classList.remove('shiftable', 'drag-origin');
+                    c.style.transform = '';
+                }));
+                document.body.classList.remove('dragging');
+                container.classList.remove('is-dragging');
+                if (changed) {
+                    render();
+                    scheduleSave();
+                    const landedRow = container.children[d.to];
+                    if (landedRow) {
+                        d.keys.forEach((i) => {
+                            const c = landedRow.querySelector('.cell[data-i="' + i + '"]');
+                            if (c) { c.classList.add('landed'); setTimeout(() => c.classList.remove('landed'), 800); }
+                        });
                     }
                 }
-
-                if (dateObj.getDay() === 0) {
-                    dateObj.setDate(dateObj.getDate() + 1);
-                }
-
-                prevDate = new Date(dateObj);
-                const ny = dateObj.getFullYear();
-                const nm = String(dateObj.getMonth() + 1).padStart(2, '0');
-                const nd = String(dateObj.getDate()).padStart(2, '0');
-                input.value = `${ny}-${nm}-${nd}`;
-                handleDateChange(input);
-            });
-
-            triggerAutoSave();
-            showToast('Sundays skipped');
+                fl.remove();
+                drag = null;
+            }, 190);
         }
 
-        function promptSkipSpecificDay() {
-            const firstDate = document.querySelector('.planner-row input[type="date"]')?.value || new Date().toISOString().split('T')[0];
-            const targetDate = prompt("Enter the date to skip (YYYY-MM-DD):", firstDate);
-            if (!targetDate) return;
+        /* ------------------------------------------------------------------ *
+         * Add days (More options + drag-down handle)
+         * ------------------------------------------------------------------ */
+        function addDaysN(n) {
+            n = Math.min(60, Math.max(1, n || 1));
+            pushUndo(n === 1 ? 'Add day' : 'Add days');
+            for (let i = 0; i < n; i++) { const r = newRow(nextDate()); fxEnter.add(r); cur().rows.push(r); }
+            render();
+            scheduleSave();
+            const last = container.lastElementChild;
+            if (last && last.scrollIntoView) last.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'nearest' });
+            showToast(plural(n, 'day') + ' added');
+        }
+        $('btn-add').addEventListener('click', () => addDaysN(1));
+        $('btn-add-n').addEventListener('click', () => addDaysN(parseInt($('add-n').value, 10) || 1));
 
-            const rows = document.querySelectorAll('.planner-row');
-            let count = 0;
-            rows.forEach(row => {
-                const input = row.querySelector('input[type="date"]');
-                if (input.value >= targetDate) {
-                    const [y, m, d] = input.value.split('-').map(Number);
-                    const dateObj = new Date(y, m - 1, d);
-                    dateObj.setDate(dateObj.getDate() + 1);
-                    const ny = dateObj.getFullYear();
-                    const nm = String(dateObj.getMonth() + 1).padStart(2, '0');
-                    const nd = String(dateObj.getDate()).padStart(2, '0');
-                    input.value = `${ny}-${nm}-${nd}`;
-                    handleDateChange(input);
-                    count++;
+        const handle = $('drag-handle');
+        let hd = null;
+        handle.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            hd = { id: e.pointerId, y: e.clientY, undoPushed: false };
+            try { handle.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+            handle.classList.add('active');
+            document.body.style.cursor = 'ns-resize';
+        });
+        handle.addEventListener('pointermove', (e) => {
+            if (!hd || e.pointerId !== hd.id) return;
+            const last = container.lastElementChild;
+            const rowH = (last && last.offsetHeight) || 60;
+            const diff = e.clientY - hd.y;
+            if (diff < rowH) return;
+            const n = Math.floor(diff / rowH);
+            if (!hd.undoPushed) { pushUndo('Add days'); hd.undoPushed = true; }
+            for (let i = 0; i < n; i++) { const r = newRow(nextDate()); fxEnter.add(r); cur().rows.push(r); }
+            hd.y += n * rowH;
+            render();
+            scheduleSave();
+        });
+        const endHandleDrag = () => {
+            if (!hd) return;
+            hd = null;
+            handle.classList.remove('active');
+            document.body.style.cursor = '';
+        };
+        handle.addEventListener('pointerup', endHandleDrag);
+        handle.addEventListener('pointercancel', endHandleDrag);
+
+        /* ------------------------------------------------------------------ *
+         * Schedule tools
+         * ------------------------------------------------------------------ */
+        function shiftAll(n) {
+            if (!n) return;
+            if (!cur().rows.some((r) => parseISO(r.date) !== null)) { showToast('There are no dates to shift yet'); return; }
+            const label = 'Shift all dates ' + (n > 0 ? '+' : '−') + Math.abs(n) + (Math.abs(n) === 1 ? ' day' : ' days');
+            commitOp(label, () => { cur().rows.forEach((r) => { r.date = addDays(r.date, n); fxFlash.add(r); }); },
+                'All dates moved ' + plural(Math.abs(n), 'day') + (n < 0 ? ' earlier' : ' later'));
+        }
+
+        /* Pushes study days off "skipped" dates. A day that lands on a skipped date moves to the next free
+           day and a blank rest row is left behind. Existing blank rows on skipped days just stay (so running
+           this twice changes nothing). Date gaps in the plan absorb the push. */
+        function planSkips(isSkipped, fromISO) {
+            const from = fromISO ? parseISO(fromISO) : null;
+            const out = [];
+            let carry = 0, prev = null, added = 0, moved = 0;
+            for (const r of cur().rows) {
+                const t = parseISO(r.date);
+                if (t === null || (from !== null && t < from)) { out.push({ ...r }); continue; }
+                if (prev !== null) {
+                    const gap = Math.round((t - prev) / DAY);
+                    if (gap > 1) carry = Math.max(0, carry - (gap - 1));
                 }
-            });
-
-            if (count > 0) {
-                triggerAutoSave();
-                showToast(`Skipped ${targetDate} & shifted upcoming days`);
+                prev = t;
+                let at = t + carry * DAY;
+                if (isRest(r)) { out.push({ ...r, date: toISO(at) }); continue; }
+                let guard = 0;
+                while (isSkipped(at) && guard++ < 14) {
+                    const rest = newRow(toISO(at));
+                    fxEnter.add(rest);
+                    fxFlash.add(rest);
+                    out.push(rest);
+                    added++;
+                    carry++;
+                    at += DAY;
+                }
+                const moved_r = { ...r, date: toISO(at) };
+                if (at !== t) { moved++; fxFlash.add(moved_r); }
+                out.push(moved_r);
             }
+            return { out, added, moved };
+        }
+        function runSkips(isSkipped, fromISO, label, okMessage) {
+            const res = planSkips(isSkipped, fromISO);
+            if (!res.added && !res.moved) { showToast('Nothing to change: no study day falls on the skipped day(s)'); return; }
+            commitOp(label, () => { cur().rows = res.out; },
+                okMessage + ' (' + plural(res.added, 'rest day') + ' added, ' + plural(res.moved, 'day') + ' pushed forward)');
+        }
+        function skipDay(idx) {
+            const r = cur().rows[idx];
+            if (!r) return;
+            const t = parseISO(r.date);
+            if (t === null) { showToast('Pick a date for this row first'); return; }
+            if (isRest(r)) { showToast('That day is already a rest day'); return; }
+            runSkips((x) => x === t, r.date, 'Skip ' + formatDateDisplay(r.date), 'Skipped ' + formatDateDisplay(r.date));
         }
 
-        // ==========================================
-        // EXPORT & SAVE ACTIONS
-        // ==========================================
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2200);
-        }
+        $('btn-minus1').addEventListener('click', () => shiftAll(-1));
+        $('btn-plus1').addEventListener('click', () => shiftAll(1));
+        const shiftN = () => Math.min(365, Math.max(1, parseInt($('shift-n').value, 10) || 1));
+        $('btn-shift-earlier').addEventListener('click', () => shiftAll(-shiftN()));
+        $('btn-shift-later').addEventListener('click', () => shiftAll(shiftN()));
 
-        function exportHTML() {
-            saveData();
-            const clone = document.documentElement.cloneNode(true);
-            const htmlContent = '<!DOCTYPE html>\n' + clone.outerHTML;
-            const blob = new Blob([htmlContent], { type: 'text/html' });
+        $('skip-chips').addEventListener('click', (e) => {
+            const chip = e.target.closest('.chip');
+            if (!chip) return;
+            const on = !chip.classList.contains('on');
+            chip.classList.toggle('on', on);
+            chip.setAttribute('aria-pressed', String(on));
+        });
+        $('btn-skip-days').addEventListener('click', () => {
+            const set = new Set(Array.from(document.querySelectorAll('#skip-chips .chip.on')).map((c) => Number(c.dataset.wd)));
+            if (!set.size) { showToast('Select at least one weekday to skip'); return; }
+            if (set.size >= 7) { showToast("You can't skip every day of the week"); return; }
+            const names = Array.from(set).sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((d) => WD_PLURAL[d]);
+            const list = names.join(', ');
+            runSkips((x) => set.has(new Date(x).getUTCDay()), $('skip-from').value, 'Skip ' + list, 'Skipped ' + list);
+        });
+        $('btn-skip-date').addEventListener('click', () => {
+            const v = $('skip-date').value;
+            const t = parseISO(v);
+            if (t === null) { showToast('Pick the date you want to skip'); return; }
+            runSkips((x) => x === t, v, 'Skip ' + formatDateDisplay(v), 'Skipped ' + formatDateDisplay(v));
+        });
+        $('btn-consecutive').addEventListener('click', () => {
+            const list = cur().rows;
+            const first = list.findIndex((r) => parseISO(r.date) !== null);
+            if (first < 0) { showToast('There are no dates to tidy yet'); return; }
+            const base = list[first].date;
+            const want = list.map((r, i) => addDays(base, i - first));
+            if (list.every((r, i) => r.date === want[i])) { showToast('Dates are already consecutive'); return; }
+            commitOp('Make dates consecutive', () => { cur().rows.forEach((r, i) => { if (r.date !== want[i]) fxFlash.add(r); r.date = want[i]; }); }, 'Dates are now consecutive');
+        });
+
+        /* ------------------------------------------------------------------ *
+         * Backups: download / import / restore points
+         * ------------------------------------------------------------------ */
+        function downloadBlob(blob, name) {
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `Study-Planner-${new Date().toISOString().split('T')[0]}.html`;
+            const url = URL.createObjectURL(blob);
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
             a.click();
-            URL.revokeObjectURL(a.href);
-            showToast("Downloaded single HTML file!");
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+        }
+        function downloadJSON() {
+            flushSave();
+            const data = { app: 'study-planner', v: 3, exportedAt: new Date().toISOString(), updatedAt: rev, activeId: ws.activeId, profiles: ws.profiles };
+            downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'study-planner-backup-' + todayISO() + '.json');
+            markBackup();
+            showToast('Backup file downloaded (all ' + plural(ws.profiles.length, 'profile') + ')');
+        }
+        function importJSONFile(file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                let inc = null;
+                try { inc = sanitizeWs(JSON.parse(String(reader.result))); } catch (e) { /* handled below */ }
+                if (!inc) { showToast("That file doesn't look like a planner backup"); return; }
+                animateNext('swap');
+                commitOp('Import backup', () => {
+                    if (isBlankWs(ws)) { ws = inc; return; }
+                    inc.profiles.forEach((p) => {
+                        if (ws.profiles.some((x) => x.id === p.id)) { p.id = uid(); p.name = (p.name + ' (imported)').slice(0, 40); }
+                        ws.profiles.push(p);
+                    });
+                    ws.activeId = inc.profiles[0].id;
+                }, 'Imported ' + plural(inc.profiles.length, 'profile'));
+            };
+            reader.onerror = () => showToast('Could not read that file');
+            reader.readAsText(file);
         }
 
-        function exportImage() {
-            if (typeof html2canvas === 'undefined') {
-                showToast("Loading image engine...");
+        async function openBackups() {
+            const body = el('div');
+            body.appendChild(el('p', '', 'Your plans are saved automatically in this browser, twice (two independent stores), and the browser is asked to keep them safe from cleanup. For full safety, keep a file copy too.'));
+            const actions = el('div', 'modal-actions');
+            const dl = el('button', 'btn btn-html', '⬇ Download backup (.json)');
+            dl.type = 'button';
+            dl.addEventListener('click', downloadJSON);
+            const imp = el('button', 'btn btn-ghost', '⬆ Import backup…');
+            imp.type = 'button';
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json,application/json';
+            fileInput.hidden = true;
+            imp.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => { if (fileInput.files[0]) { importJSONFile(fileInput.files[0]); modal.close(); } });
+            actions.append(dl, imp, fileInput);
+            body.appendChild(actions);
+
+            body.appendChild(el('h3', '', 'Restore points'));
+            body.appendChild(el('p', '', 'Snapshots of each profile are taken automatically while you work, and before big changes like shifting dates, importing or deleting. Restoring one also brings back a deleted profile.'));
+            const ul = el('ul', 'snap-list');
+            body.appendChild(ul);
+            const modal = openModal('Backups', body);
+
+            const list = await snapList();
+            if (!list.length) {
+                ul.appendChild(el('li', 'snap-item', 'No restore points yet — they appear as you work.'));
                 return;
             }
-            showToast("Generating image...");
-            const card = document.getElementById('planner-card');
-            card.classList.add('exporting');
-
-            html2canvas(card, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff'
-            }).then(canvas => {
-                card.classList.remove('exporting');
-                const link = document.createElement('a');
-                link.download = `Study-Plan-${new Date().toISOString().split('T')[0]}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                showToast("Image downloaded!");
-            }).catch(err => {
-                card.classList.remove('exporting');
-                console.error('Image export failed:', err);
-                showToast("Image export failed.");
+            list.forEach((snap) => {
+                const exists = ws.profiles.some((p) => p.id === snap.profile.id);
+                const li = el('li', 'snap-item');
+                const info = el('div');
+                info.appendChild(el('strong', '', snap.profile.name + (exists ? '' : ' (deleted profile)') + ' · ' + fmtStamp(snap.ts)));
+                info.appendChild(el('small', '', (snap.reason || 'Snapshot') + ' · ' + plural(snap.profile.rows.length, 'day') + ', ' + plural(plannedCount(snap.profile), 'slot') + ' planned'));
+                const btn = el('button', 'btn btn-ghost', exists ? 'Restore' : 'Bring back');
+                btn.type = 'button';
+                btn.addEventListener('click', () => {
+                    if (!confirm((exists ? 'Restore "' + snap.profile.name + '" to the version from ' : 'Bring back "' + snap.profile.name + '" from ') + fmtStamp(snap.ts) + '?\n\nThe current version is kept as a restore point.')) return;
+                    const target = ws.profiles.find((p) => p.id === snap.profile.id);
+                    if (target) snapshotProfile(target, 'Before restoring an older version');
+                    animateNext('swap');
+                    commitOp('Restore backup', () => {
+                        const p = clone(snap.profile);
+                        const i = ws.profiles.findIndex((x) => x.id === p.id);
+                        if (i >= 0) ws.profiles[i] = p; else ws.profiles.push(p);
+                        ws.activeId = p.id;
+                    }, 'Restored "' + snap.profile.name + '" from ' + fmtStamp(snap.ts));
+                    modal.close();
+                });
+                li.append(info, btn);
+                ul.appendChild(li);
             });
         }
+        $('btn-backups').addEventListener('click', openBackups);
+
+        /* ------------------------------------------------------------------ *
+         * Exports
+         * ------------------------------------------------------------------ */
+        // "Save HTML": a complete copy of this page WITH all your profiles stored inside it.
+        async function exportHTML() {
+            try { await saveNow(true); } catch (e) { /* export anyway */ }
+            const c = document.documentElement.cloneNode(true);
+            c.removeAttribute('style');
+            c.removeAttribute('data-theme');   // the opener's own light/dark preference applies
+            c.classList.remove('theme-anim');
+            if (!c.getAttribute('class')) c.removeAttribute('class');
+            c.querySelector('#rows-container').replaceChildren();
+            c.querySelector('#rows-container').removeAttribute('class');
+            c.querySelector('#planner-head').replaceChildren();
+            c.querySelector('#profile-bar').replaceChildren();
+            c.querySelector('#subject-list').replaceChildren();
+            c.querySelectorAll('.modal-backdrop').forEach((n) => n.remove());
+            const card = c.querySelector('#planner-card');
+            card.classList.remove('exporting', 'stacked');
+            card.removeAttribute('style');
+            const body = c.querySelector('body');
+            body.removeAttribute('class');
+            body.removeAttribute('style');
+            const toast = c.querySelector('#toast');
+            toast.className = 'toast';
+            toast.textContent = '';
+            const menu = c.querySelector('#export-menu');
+            menu.classList.remove('open');
+            menu.removeAttribute('style');
+            c.querySelector('#storage-banner').setAttribute('hidden', '');
+            const tools = c.querySelector('#tools');
+            if (tools) tools.removeAttribute('open');
+            c.querySelector('#status').textContent = '';
+            c.querySelector('#embedded-data').textContent = JSON.stringify(getPayload()).replace(/</g, '\\u003c');
+            const html = '<!DOCTYPE html>\n' + c.outerHTML;
+            downloadBlob(new Blob([html], { type: 'text/html' }), 'study-planner-' + todayISO() + '.html');
+            markBackup();
+            showToast('HTML downloaded — all your profiles are saved inside it!');
+        }
+
+        /* PDF export: the same drawing as the image export, cut into A4-landscape pages at row
+           boundaries (the header repeats on every page) and written out as a small PDF file by hand.
+           No library, no network. */
+        function buildPDF(pages, PW, PH) {
+            const enc = new TextEncoder();
+            const chunks = [];
+            const offsets = [];
+            let len = 0;
+            const push = (u8) => { chunks.push(u8); len += u8.length; };
+            const pushStr = (t) => push(enc.encode(t));
+            const obj = (n, fn) => { offsets[n] = len; pushStr(n + ' 0 obj\n'); fn(); pushStr('\nendobj\n'); };
+            const n = pages.length;
+            pushStr('%PDF-1.4\n');
+            obj(1, () => pushStr('<< /Type /Catalog /Pages 2 0 R >>'));
+            obj(2, () => pushStr('<< /Type /Pages /Kids [' + pages.map((_, i) => (3 + i * 3) + ' 0 R').join(' ') + '] /Count ' + n + ' >>'));
+            pages.forEach((p, i) => {
+                const po = 3 + i * 3, co = po + 1, io = po + 2;
+                obj(po, () => pushStr('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW.toFixed(2) + ' ' + PH.toFixed(2) + '] /Resources << /XObject << /Im0 ' + io + ' 0 R >> >> /Contents ' + co + ' 0 R >>'));
+                const content = 'q ' + p.w.toFixed(2) + ' 0 0 ' + p.h.toFixed(2) + ' ' + p.x.toFixed(2) + ' ' + p.y.toFixed(2) + ' cm /Im0 Do Q';
+                obj(co, () => pushStr('<< /Length ' + content.length + ' >>\nstream\n' + content + '\nendstream'));
+                obj(io, () => {
+                    pushStr('<< /Type /XObject /Subtype /Image /Width ' + p.wPx + ' /Height ' + p.hPx + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + p.jpeg.length + ' >>\nstream\n');
+                    push(p.jpeg);
+                    pushStr('\nendstream');
+                });
+            });
+            const total = 3 + n * 3;
+            const xref = len;
+            pushStr('xref\n0 ' + total + '\n0000000000 65535 f \n');
+            for (let i = 1; i < total; i++) pushStr(String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
+            pushStr('trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF');
+            const out = new Uint8Array(len);
+            let at = 0;
+            chunks.forEach((c) => { out.set(c, at); at += c.length; });
+            return out;
+        }
+        async function exportPDF() {
+            const name = 'Study-Plan-' + safeName(cur().name) + '.pdf';
+            try {
+                showToast('Preparing PDF…');
+                const canvas = drawPlanner(2);
+                const g = canvas.geo;
+                const PW = 841.89, PH = 595.28, M = 28.35;           // A4 landscape in points, 10 mm margin
+                const imgW = PW - 2 * M;
+                const capacity = (PH - 2 * M) * (g.W / imgW) - g.headH;   // row space per page, in canvas px
+                const groups = [];
+                let group = [], used = 0;
+                g.heights.forEach((h, i) => {
+                    if (group.length && used + h > capacity) { groups.push(group); group = []; used = 0; }
+                    group.push(i);
+                    used += h;
+                });
+                groups.push(group);
+                const pages = [];
+                for (const grp of groups) {
+                    const hdrPx = Math.round(g.headH * g.sc);
+                    const start = grp.length ? g.tops[grp[0]] : g.headH;
+                    const chunkPx = Math.round(grp.reduce((a, i) => a + g.heights[i], 0) * g.sc);
+                    const pc = document.createElement('canvas');
+                    pc.width = canvas.width;
+                    pc.height = hdrPx + chunkPx;
+                    const pctx = pc.getContext('2d');
+                    pctx.fillStyle = '#ffffff';
+                    pctx.fillRect(0, 0, pc.width, pc.height);
+                    pctx.drawImage(canvas, 0, 0, canvas.width, hdrPx, 0, 0, canvas.width, hdrPx);
+                    if (chunkPx > 0) pctx.drawImage(canvas, 0, Math.round(start * g.sc), canvas.width, chunkPx, 0, hdrPx, canvas.width, chunkPx);
+                    const blob = await new Promise((res) => pc.toBlob(res, 'image/jpeg', 0.92));
+                    if (!blob) throw new Error('could not encode the page image');
+                    const hPt = (pc.height / pc.width) * imgW;
+                    pages.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), wPx: pc.width, hPx: pc.height, x: M, y: PH - M - hPt, w: imgW, h: hPt });
+                }
+                downloadBlob(new Blob([buildPDF(pages, PW, PH)], { type: 'application/pdf' }), name);
+                showToast('PDF downloaded!');
+            } catch (err) {
+                console.error(err);
+                showToast('PDF export failed: ' + err.message);
+            }
+        }
+
+        /* Image export draws the planner straight onto a canvas: no external library, works offline,
+           and looks identical on every device (independent of screen size). */
+        function roundRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+        function wrapText(ctx, text, maxW, maxLines) {
+            const words = text.split(/\s+/).filter(Boolean);
+            const lines = [];
+            let line = '';
+            for (const w0 of words) {
+                let w = w0;
+                while (ctx.measureText(w).width > maxW) {
+                    let cut = w.length;
+                    while (cut > 1 && ctx.measureText(w.slice(0, cut)).width > maxW) cut--;
+                    if (line) { lines.push(line); line = ''; }
+                    lines.push(w.slice(0, cut));
+                    w = w.slice(cut);
+                }
+                const test = line ? line + ' ' + w : w;
+                if (ctx.measureText(test).width <= maxW) line = test;
+                else { lines.push(line); line = w; }
+            }
+            if (line) lines.push(line);
+            if (lines.length > maxLines) {
+                lines.length = maxLines;
+                let last = lines[maxLines - 1];
+                while (last.length > 1 && ctx.measureText(last + '…').width > maxW) last = last.slice(0, -1);
+                lines[maxLines - 1] = last + '…';
+            }
+            return lines.length ? lines : [''];
+        }
+        function drawPlanner(scale) {
+            const p = cur();
+            const N = p.count;
+            const subs = p.subjects.slice(0, N);
+            const list = p.rows;
+            const FONT = "'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif";
+            const padX = 20, dateW = 150, gap = 15, headH = 54, vPad = 12, slotS = 32, slotGap = 10, boxPad = 10, lineH = 18;
+            const W = N <= 3 ? 1200 : padX * 2 + dateW + gap * N + N * 300;
+            const colW = (W - padX * 2 - dateW - gap * N) / N;
+            const boxW = colW - slotS - slotGap;
+
+            const measure = document.createElement('canvas').getContext('2d');
+            measure.font = '600 14px ' + FONT;
+            const layout = list.map((r) => {
+                let maxLines = 1;
+                const lines = [];
+                for (let i = 0; i < N; i++) {
+                    const c = r.cells[i];
+                    const text = c.on ? c.v.trim() : '';
+                    lines[i] = text ? wrapText(measure, text, boxW - boxPad * 2, 3) : [''];
+                    maxLines = Math.max(maxLines, lines[i].length);
+                }
+                const boxH = Math.max(38, maxLines * lineH + 20);
+                return { lines, boxH, h: boxH + vPad * 2 };
+            });
+            const bodyH = list.length ? layout.reduce((a, l) => a + l.h, 0) : 70;
+            const totalH = headH + bodyH;
+            const tops = [];
+            let accY = headH;
+            layout.forEach((l) => { tops.push(accY); accY += l.h; });
+
+            let sc = scale;
+            const MAX = 16000;
+            if (totalH * sc > MAX) sc = MAX / totalH;
+            if (W * sc > MAX) sc = MAX / W;
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(W * sc);
+            canvas.height = Math.round(totalH * sc);
+            canvas.geo = { W, headH, tops, heights: layout.map((l) => l.h), sc };
+            const ctx = canvas.getContext('2d');
+            ctx.scale(sc, sc);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, W, totalH);
+
+            // header
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, W, headH);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '600 16px ' + FONT;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Date', padX + dateW / 2, headH / 2);
+            const colX = (i) => padX + dateW + gap + i * (colW + gap);
+            subs.forEach((s, i) => {
+                const label = (s.name || '').trim() || ('Subject ' + (i + 1));
+                const lines = wrapText(ctx, label, colW - 50, 1);
+                const tw = ctx.measureText(lines[0]).width;
+                const cx = colX(i) + colW / 2;
+                ctx.fillStyle = s.color;
+                ctx.beginPath();
+                ctx.arc(cx - tw / 2 - 12, headH / 2, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(lines[0], cx + 2, headH / 2);
+            });
+
+            if (!list.length) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '500 15px ' + FONT;
+                ctx.fillText('No days planned yet', W / 2, headH + 35);
+                return canvas;
+            }
+
+            let y = headH;
+            list.forEach((r, ri) => {
+                const L = layout[ri];
+                const mid = y + L.h / 2;
+
+                // date
+                roundRect(ctx, padX, mid - 19, dateW, 38, 6);
+                ctx.fillStyle = '#f8fafc';
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#e2e8f0';
+                ctx.stroke();
+                ctx.font = '600 14px ' + FONT;
+                ctx.fillStyle = weekdayOf(r.date) === 0 ? '#dc2626' : (r.date ? '#475569' : '#94a3b8');
+                ctx.textAlign = 'center';
+                ctx.fillText(formatDateDisplay(r.date), padX + dateW / 2, mid + 1);
+
+                // subjects
+                subs.forEach((s, i) => {
+                    const x = colX(i);
+                    const on = r.cells[i].on;
+
+                    ctx.save();
+                    roundRect(ctx, x + 1.25, mid - slotS / 2 + 1.25, slotS - 2.5, slotS - 2.5, 7);
+                    if (on) {
+                        ctx.shadowColor = alphaOf(s.color, 0.4);
+                        ctx.shadowBlur = 8;
+                        ctx.shadowOffsetY = 3;
+                        ctx.fillStyle = s.color;
+                        ctx.fill();
+                        ctx.shadowColor = 'transparent';
+                        ctx.lineWidth = 2.5;
+                        ctx.strokeStyle = s.color;
+                        ctx.stroke();
+                    } else {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fill();
+                        ctx.lineWidth = 2.5;
+                        ctx.strokeStyle = '#cbd5e1';
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+
+                    const bx = x + slotS + slotGap;
+                    roundRect(ctx, bx, mid - L.boxH / 2, boxW, L.boxH, 6);
+                    ctx.fillStyle = on ? tintOf(s.color) : '#f8fafc';
+                    ctx.fill();
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = on ? s.color : '#e2e8f0';
+                    ctx.stroke();
+
+                    ctx.textAlign = 'left';
+                    if (on) {
+                        ctx.font = '600 14px ' + FONT;
+                        ctx.fillStyle = s.color;
+                        const lines = L.lines[i];
+                        const startY = mid - (lines.length * lineH) / 2 + lineH / 2;
+                        lines.forEach((ln, li) => ctx.fillText(ln, bx + boxPad, startY + li * lineH + 1));
+                    } else {
+                        ctx.font = '400 14px ' + FONT;
+                        ctx.fillStyle = '#b6c0cd';
+                        ctx.fillText('Skipped', bx + boxPad, mid + 1);
+                    }
+                });
+
+                y += L.h;
+                ctx.fillStyle = '#e2e8f0';
+                ctx.fillRect(0, y - 1, W, 1);
+            });
+            return canvas;
+        }
+        function exportImage() {
+            try {
+                const canvas = drawPlanner(2);
+                canvas.toBlob((blob) => {
+                    if (!blob) { showToast('Could not create the image — try a shorter plan or another browser'); return; }
+                    downloadBlob(blob, 'Study-Plan-' + safeName(cur().name) + '.png');
+                    showToast('Image downloaded!');
+                }, 'image/png');
+            } catch (err) {
+                console.error(err);
+                showToast('Image export failed: ' + err.message);
+            }
+        }
+
+        /* Export menu (Image / PDF under one button) */
+        const expMenu = $('export-menu');
+        const expBtn = $('btn-export');
+        const menuOpen = () => expMenu.classList.contains('open');
+        function closeExportMenu() { expMenu.classList.remove('open'); expBtn.setAttribute('aria-expanded', 'false'); }
+        // Keeps the menu anchored to the button, also while the page scrolls (e.g. a phone's address bar collapsing).
+        function positionExportMenu() {
+            const b = expBtn.getBoundingClientRect();
+            const mw = expMenu.offsetWidth, mh = expMenu.offsetHeight;
+            let top = b.top - mh - 8;
+            let below = false;
+            if (top < 8) { top = b.bottom + 8; below = true; }
+            expMenu.style.transformOrigin = below ? 'top center' : 'bottom center';
+            const left = Math.min(Math.max(8, b.left + b.width / 2 - mw / 2), window.innerWidth - mw - 8);
+            expMenu.style.top = top + 'px';
+            expMenu.style.left = left + 'px';
+        }
+        function openExportMenu() {
+            expMenu.classList.add('open');
+            expBtn.setAttribute('aria-expanded', 'true');
+            positionExportMenu();
+            const first = expMenu.querySelector('button');
+            if (first) first.focus({ preventScroll: true });
+        }
+        expBtn.addEventListener('click', () => { if (!menuOpen()) openExportMenu(); else closeExportMenu(); });
+        $('exp-img').addEventListener('click', () => { closeExportMenu(); exportImage(); });
+        $('exp-pdf').addEventListener('click', () => { closeExportMenu(); exportPDF(); });
+        document.addEventListener('pointerdown', (e) => { if (menuOpen() && !expMenu.contains(e.target) && !expBtn.contains(e.target)) closeExportMenu(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && menuOpen()) { closeExportMenu(); expBtn.focus(); } });
+        const repositionMenu = () => { if (menuOpen()) positionExportMenu(); };
+        window.addEventListener('resize', repositionMenu);
+        window.addEventListener('scroll', repositionMenu, { passive: true });
+
+        $('btn-html').addEventListener('click', exportHTML);
+        $('btn-undo').addEventListener('click', undo);
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z') {
+                const t = e.target;
+                if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;   // keep native text undo
+                if (undoStack.length) { e.preventDefault(); undo(); }
+            }
+        });
+
+        /* ------------------------------------------------------------------ *
+         * Theme (light / dark), nicer date pickers, phone layout
+         * ------------------------------------------------------------------ */
+        const THEME_KEY = 'studyPlanner.theme';
+        const rootEl = document.documentElement;
+        const themeOf = () => (rootEl.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+        function paintThemeUI() {
+            const dark = themeOf() === 'dark';
+            const b = $('btn-theme');
+            b.textContent = dark ? '☀️' : '🌙';
+            const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
+            b.title = label;
+            b.setAttribute('aria-label', label);
+            $('meta-theme').setAttribute('content', dark ? '#0b1120' : '#f8fafc');
+        }
+        let themeTimer = null;
+        function setTheme(t, persist) {
+            if (!reduceMotion()) {
+                rootEl.classList.add('theme-anim');
+                clearTimeout(themeTimer);
+                themeTimer = setTimeout(() => rootEl.classList.remove('theme-anim'), 450);
+            }
+            rootEl.setAttribute('data-theme', t);
+            if (persist) { try { localStorage.setItem(THEME_KEY, t); } catch (e) { /* ignore */ } }
+            paintThemeUI();
+        }
+        function initTheme() {
+            paintThemeUI();
+            $('btn-theme').addEventListener('click', () => setTheme(themeOf() === 'dark' ? 'light' : 'dark', true));
+            try {
+                const mq = window.matchMedia('(prefers-color-scheme: dark)');
+                const onChange = (e) => {
+                    let stored = null;
+                    try { stored = localStorage.getItem(THEME_KEY); } catch (err) { /* ignore */ }
+                    if (stored !== 'light' && stored !== 'dark') setTheme(e.matches ? 'dark' : 'light', false);   // follow the system until you choose
+                };
+                if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
+            } catch (e) { /* ignore */ }
+        }
+
+        function formatDateLong(iso) {
+            const t = parseISO(iso);
+            if (t === null) return '';
+            const d = new Date(t);
+            return WD[d.getUTCDay()] + ', ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+        }
+        function initDatePickers() {
+            document.querySelectorAll('.datepick').forEach((dpEl) => {
+                const input = dpEl.querySelector('input[type="date"]');
+                const face = dpEl.querySelector('.dp-face');
+                const text = dpEl.querySelector('.dp-text');
+                const clear = dpEl.querySelector('.dp-clear');
+                const placeholder = text.dataset.ph || 'Pick a date';
+                const update = () => {
+                    text.textContent = input.value ? formatDateLong(input.value) : placeholder;
+                    face.classList.toggle('empty', !input.value);
+                    clear.hidden = !input.value;
+                };
+                input.addEventListener('input', update);
+                input.addEventListener('change', update);
+                input.addEventListener('click', () => { try { input.showPicker(); } catch (e) { /* unsupported or already open */ } });
+                clear.addEventListener('click', (e) => { e.preventDefault(); input.value = ''; update(); });
+                update();
+            });
+        }
+
+        /* "More options" opens and closes with a height + fade animation. */
+        let toolsAnim = null;
+        function initToolsAnimation() {
+            const tools = $('tools');
+            const body = tools.querySelector('.tools-body');
+            tools.querySelector('summary').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (toolsAnim) { toolsAnim.cancel(); toolsAnim = null; }
+                const opening = !tools.open;
+                if (reduceMotion() || !body.animate) { tools.open = opening; return; }
+                const ease = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+                if (opening) {
+                    tools.open = true;
+                    const h = body.offsetHeight;
+                    toolsAnim = body.animate([{ height: '0px', opacity: 0 }, { height: h + 'px', opacity: 1 }], { duration: 300, easing: ease });
+                    toolsAnim.onfinish = () => { toolsAnim = null; };
+                } else {
+                    const h = body.offsetHeight;
+                    toolsAnim = body.animate([{ height: h + 'px', opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 220, easing: 'ease' });
+                    toolsAnim.onfinish = () => { toolsAnim = null; tools.open = false; };
+                }
+            });
+        }
+
+        /* Phone layout: when the table would not fit its card, each day becomes a stacked card.
+           (A little hysteresis stops it flip-flopping when a scrollbar appears.) */
+        let printing = false;
+        function updateLayoutMode() {
+            const card = $('planner-card');
+            if (printing || drag || !ws.profiles.length || card.classList.contains('exporting')) return;
+            const w = card.getBoundingClientRect().width;
+            if (!w) return;
+            const need = 270 + cur().count * 150;
+            const was = card.classList.contains('stacked');
+            const now = was ? w < need + 24 : w < need;
+            if (now !== was) card.classList.toggle('stacked', now);
+        }
+        function initLayoutWatcher() {
+            if ('ResizeObserver' in window) new ResizeObserver(updateLayoutMode).observe($('planner-card'));
+            else window.addEventListener('resize', updateLayoutMode);
+            window.addEventListener('orientationchange', () => setTimeout(updateLayoutMode, 200));
+        }
+
+        // Printing (and "Save as PDF" from the print dialog) is always light and table-shaped.
+        let printPrev = null;
+        window.addEventListener('beforeprint', () => {
+            printing = true;
+            printPrev = rootEl.getAttribute('data-theme');
+            rootEl.setAttribute('data-theme', 'light');
+            $('planner-card').classList.remove('stacked');
+        });
+        window.addEventListener('afterprint', () => {
+            printing = false;
+            if (printPrev) { rootEl.setAttribute('data-theme', printPrev); printPrev = null; }
+            updateLayoutMode();
+        });
+
+        /* ------------------------------------------------------------------ *
+         * Start-up
+         * ------------------------------------------------------------------ */
+        function askFileVsBrowser(fromFile, fromBrowser) {
+            return new Promise((resolve) => {
+                let done = false;
+                const body = el('div');
+                body.appendChild(el('p', '', 'This file has saved plans inside it that are different from the plans already stored in this browser. Which do you want to use? The other set is kept under Backups, so nothing is lost.'));
+                const mk = (title, meta, cls, useFile) => {
+                    const b = el('button', 'btn ' + cls, title);
+                    b.type = 'button';
+                    b.addEventListener('click', () => { done = true; resolve(useFile); modal.close(); });
+                    const wrap = el('div');
+                    wrap.style.margin = '12px 0';
+                    wrap.appendChild(b);
+                    wrap.appendChild(el('p', '', meta));
+                    return wrap;
+                };
+                body.appendChild(mk('Use the plans from this file', plural(fromFile.ws.profiles.length, 'profile') + ', ' + plural(totalDays(fromFile.ws), 'day') + ' · saved ' + (fromFile.ts ? fmtStamp(fromFile.ts) : 'earlier'), 'btn-html', true));
+                body.appendChild(mk('Keep my browser plans', plural(fromBrowser.ws.profiles.length, 'profile') + ', ' + plural(totalDays(fromBrowser.ws), 'day') + ' · last changed ' + (fromBrowser.ts > 1 ? fmtStamp(fromBrowser.ts) : 'earlier'), 'btn-add', false));
+                const modal = openModal('Which plans do you want?', body, { onClose: () => { if (!done) resolve(false); } });
+            });
+        }
+
+        async function init() {
+            initTheme();
+            initToolsAnimation();
+            initDatePickers();
+            initLayoutWatcher();
+            updateUndoBtn();
+            db = await Promise.race([openDB(), new Promise((r) => setTimeout(() => r(null), 2000))]);
+
+            const locals = await gatherLocalCandidates();
+            const local = locals[0] || null;
+            const embedded = readEmbedded();
+            let chosen = local;
+            let loser = null;
+
+            if (embedded && !isBlankWs(embedded.ws)) {
+                if (!local || isBlankWs(local.ws)) {
+                    chosen = embedded;
+                } else if (embedded.ts > local.ts && JSON.stringify(embedded.ws.profiles) !== JSON.stringify(local.ws.profiles)) {
+                    const useFile = await askFileVsBrowser(embedded, local);
+                    chosen = useFile ? embedded : local;
+                    loser = useFile ? local : embedded;
+                }
+            }
+            if (loser) {
+                for (const p of loser.ws.profiles) {
+                    if (!isBlankProfile(p)) {
+                        await snapAdd({ ts: nextTs(), reason: loser.src === 'file' ? 'Plan stored inside the opened file (not used)' : 'Browser plan before switching to the file plans', profile: clone(p) });
+                    }
+                }
+            }
+
+            ws = chosen ? clone(chosen.ws) : { activeId: '', profiles: [makeProfile('My plan')] };
+            if (!ws.profiles.some((p) => p.id === ws.activeId)) ws.activeId = ws.profiles[0].id;
+            rev = chosen ? chosen.ts : 0;
+
+            // remember the newest restore point of each profile so we don't duplicate it
+            const snaps = await snapList();
+            snaps.forEach((s) => { if (!lastSnap[s.profile.id]) lastSnap[s.profile.id] = { at: s.ts, json: JSON.stringify(s.profile) }; });
+
+            animateNext('swap');
+            renderAll();
+            await saveNow(!chosen || chosen.src !== 'browser' || chosen.migrated);   // bring every store in sync (keeps the timestamp on a plain reload)
+
+            try { if (navigator.storage && navigator.storage.persisted) persisted = (await navigator.storage.persisted()) || null; } catch (e) { /* ignore */ }
+            const once = () => { askPersist(); };
+            window.addEventListener('pointerdown', once, { once: true, capture: true });
+            window.addEventListener('keydown', once, { once: true, capture: true });
+            setStatus();
+            dirtySinceBackup = false;
+        }
+
+        // flush on tab hide / close, so the last keystrokes are never lost
+        document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
+        window.addEventListener('pagehide', flushSave);
+        window.addEventListener('beforeunload', (e) => {
+            flushSave();
+            if (!storageOK && dirtySinceBackup && !isBlankWs(ws)) { e.preventDefault(); e.returnValue = ''; }
+        });
+        // another tab changed the plans
+        window.addEventListener('storage', (e) => {
+            if (e.key !== LS_KEY || !e.newValue || saveTimer || drag) return;
+            try {
+                const o = JSON.parse(e.newValue);
+                const w = sanitizeWs(o);
+                if (w && Number(o.updatedAt) > rev) {
+                    if (w.profiles.some((p) => p.id === ws.activeId)) w.activeId = ws.activeId;
+                    ws = w;
+                    rev = Number(o.updatedAt);
+                    renamingId = null;
+                    renderAll();
+                    setStatus();
+                    showToast('Updated from another open tab');
+                }
+            } catch (err) { /* ignore */ }
+        });
+
+        init();
+    })();
     </script>
-<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "04ff67790ed64af0812cf17fbe587746"}'></script><!-- End Cloudflare Web Analytics -->
+    <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "04ff67790ed64af0812cf17fbe587746"}'></script><!-- End Cloudflare Web Analytics -->
 </body>
 </html>
